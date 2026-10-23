@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PLANETS } from '../data/planets';
+import { DWARF_PLANETS, ASTEROIDS } from '../data/dwarfPlanets';
 import { BEYOND_OBJECTS } from '../data/beyond';
 import { buildPlanetTextures, createSaturnRingTexture } from '../utils/textures';
 import { loadHybridTextures } from './loader';
@@ -34,6 +35,13 @@ export class SpaceScene {
 
   // spacecraft
   spacecraftManager!: SpacecraftManager;
+
+  // dwarf + asteroids
+  dwarfGroups: Map<string, THREE.Group> = new Map();
+  dwarfMeshes: Map<string, THREE.Mesh> = new Map();
+  asteroidDetails: THREE.Group[] = [];
+  showDwarfs = true;
+  showAsteroids = true;
 
   // state
   timeScale = 1;
@@ -101,6 +109,8 @@ export class SpaceScene {
     this.createStarfield();
     this.createSun();
     this.createPlanets();
+    this.createDwarfPlanets();
+    this.createBeltAsteroids();
     this.createAsteroidBelt();
     this.createKuiperBelt();
     this.createBeyond();
@@ -439,6 +449,109 @@ export class SpaceScene {
       group.add(labelGroup);
       (mesh.userData as any).labelGroup = labelGroup;
       this.labelSprites.set(p.id, label);
+    }
+  }
+
+  private createDwarfPlanets(){
+    // Dwarf planets orbit groups — smaller, inclined, with labels
+    for(const p of DWARF_PLANETS){
+      const group = new THREE.Group();
+      group.name = `dwarf-${p.id}`;
+      group.rotation.x = p.orbitInclination * 0.5;
+      const startAngle = (Math.random()*360) * Math.PI/180;
+      group.userData = { orbitRadius: p.orbitRadius, orbitSpeed: p.orbitSpeed, curAngle: startAngle, id: p.id, isDwarf: true };
+
+      const geo = new THREE.SphereGeometry(p.radiusScale, 28,28);
+      // Dwarf texture: reuse procedural or mix with noise
+      const hue = new THREE.Color(p.color);
+      const mat = new THREE.MeshStandardMaterial({ color: hue, roughness: 0.88 });
+      // If we have a generated texture for dwarf like Ceres we could reuse earth moon texture but color tint enough
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = p.id; mesh.userData.id = p.id; mesh.userData.isDwarf = true;
+      mesh.position.set(p.orbitRadius * Math.cos(startAngle), 0, p.orbitRadius * Math.sin(startAngle));
+      group.add(mesh);
+      this.dwarfMeshes.set(p.id, mesh);
+      this.dwarfGroups.set(p.id, group);
+      // also register in planets map for generic handling? Keep separate but add to raycast list
+      // keep in planetGroups for unified orbit update? Use separate iteration but reuse same code path
+      this.planetGroups.set(p.id, group); // so animate loop picks it up
+      this.scene.add(group);
+
+      // orbit line dotted style (dimmer, dashed)
+      const orbitGeo = new THREE.BufferGeometry();
+      const seg=96;
+      const pos = new Float32Array((seg+1)*3);
+      for(let i=0;i<=seg;i++){ const a=(i/seg)*Math.PI*2; pos[i*3]=Math.cos(a)*p.orbitRadius; pos[i*3+1]=0; pos[i*3+2]=Math.sin(a)*p.orbitRadius; }
+      orbitGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+      const orbitMat = new THREE.LineDashedMaterial({ color: new THREE.Color(p.color).multiplyScalar(0.55), transparent:true, opacity:0.28, dashSize:0.5, gapSize:0.35 });
+      const line = new THREE.Line(orbitGeo, orbitMat);
+      line.computeLineDistances();
+      line.rotation.x = group.rotation.x;
+      this.orbitLines.set(p.id, line);
+      this.scene.add(line);
+
+      // label
+      const label = this.makeLabel(`${p.name} ★`);
+      label.scale.set(2.6,0.66,1);
+      label.position.set(0, p.radiusScale+0.55, 0);
+      const lg = new THREE.Group(); lg.position.copy(mesh.position); lg.add(label); group.add(lg);
+      (mesh.userData as any).labelGroup = lg;
+      this.labelSprites.set(p.id, label);
+
+      // Haumea ring
+      if(p.hasRings){
+        const ringGeo = new THREE.RingGeometry(p.radiusScale*1.35, p.radiusScale*1.85, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color:0xC8D8E8, transparent:true, opacity:0.26, side:THREE.DoubleSide, depthWrite:false });
+        const rm = new THREE.Mesh(ringGeo, ringMat); rm.rotation.x = Math.PI/2; mesh.add(rm);
+      }
+    }
+  }
+
+  private createBeltAsteroids(){
+    // Named asteroids as clickable tiny spheres with orbits + labels
+    for(const a of ASTEROIDS){
+      const group = new THREE.Group();
+      group.name=`ast-${a.id}`;
+      group.rotation.x = (Math.random()-0.5)*0.15;
+      const startAngle = Math.random()*Math.PI*2;
+      group.userData = { orbitRadius: a.orbitRadius, orbitSpeed: a.orbitSpeed, curAngle: startAngle, id: a.id, isAsteroid: true };
+
+      const geo = new THREE.SphereGeometry(0.09 + Math.random()*0.05, 12,12);
+      // perturb to make irregular
+      const posAttr = geo.attributes.position as THREE.BufferAttribute;
+      for(let i=0;i<posAttr.count;i++){
+        const v = new THREE.Vector3().fromBufferAttribute(posAttr,i);
+        v.multiplyScalar(0.9 + Math.random()*0.22);
+        posAttr.setXYZ(i, v.x, v.y, v.z);
+      }
+      posAttr.needsUpdate=true; geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(a.color), roughness: 0.96 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name=a.id; mesh.userData.id=a.id; mesh.userData.isAsteroid=true;
+      mesh.position.set(a.orbitRadius * Math.cos(startAngle), (Math.random()-0.5)*0.6, a.orbitRadius * Math.sin(startAngle));
+      group.add(mesh);
+      this.dwarfGroups.set(a.id, group);
+      this.planetGroups.set(a.id, group); // reuse animate
+      this.scene.add(group);
+
+      const orbitGeo = new THREE.BufferGeometry();
+      const pos = new Float32Array(4*3);
+      // simple small arc hint? We'll make full orbit but very dim
+      // Actually make faint line: 64 segments
+      const seg=48;
+      const opos = new Float32Array((seg+1)*3);
+      for(let i=0;i<=seg;i++){ const ang=(i/seg)*Math.PI*2; opos[i*3]=Math.cos(ang)*a.orbitRadius; opos[i*3+2]=Math.sin(ang)*a.orbitRadius; }
+      const oGeo=new THREE.BufferGeometry(); oGeo.setAttribute('position', new THREE.BufferAttribute(opos,3));
+      const oMat=new THREE.LineBasicMaterial({ color: new THREE.Color(a.color).multiplyScalar(0.5), transparent:true, opacity:0.12 });
+      const line=new THREE.Line(oGeo, oMat); line.rotation.x=group.rotation.x; this.orbitLines.set(a.id, line); this.scene.add(line);
+
+      // tiny label only when zoomed? Keep hidden until focus but add
+      const label=this.makeLabel(a.name);
+      label.scale.set(1.9,0.48,1);
+      label.position.set(0,0.35,0);
+      const lg=new THREE.Group(); lg.position.copy(mesh.position); lg.add(label); group.add(lg);
+      (mesh.userData as any).labelGroup=lg;
+      this.labelSprites.set(a.id, label);
     }
   }
 

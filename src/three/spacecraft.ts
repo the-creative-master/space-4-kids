@@ -14,12 +14,12 @@ export type CraftInfo = {
 };
 
 export const CRAFTS: CraftInfo[] = [
-  { id: 'iss', file: 'iss.glb', label: 'ISS — International Space Station', parent: 'earth', orbitRadius: 1.55, orbitSpeed: 0.08, scale: 0.035 },
-  { id: 'hubble', file: 'hubble.glb', label: 'Hubble Space Telescope', parent: 'earth', orbitRadius: 1.42, orbitSpeed: -0.06, scale: 0.028 },
-  { id: 'apollo', file: 'apollo-lm.glb', label: 'Apollo Lunar Module', parent: 'moon', orbitRadius: 0.55, orbitSpeed: 0.04, scale: 0.022 },
-  { id: 'voyager', file: 'voyager.glb', label: 'Voyager 1 — Interstellar Probe', parent: 'free', orbitRadius: 84, orbitSpeed: 0.0012, scale: 0.06 },
-  { id: 'parker', file: 'parker.glb', label: 'Parker Solar Probe — Touching the Sun', parent: 'sun', orbitRadius: 5.2, orbitSpeed: 0.09, scale: 0.025 },
-  { id: 'mro', file: 'mro.glb', label: 'Mars Reconnaissance Orbiter', parent: 'mars', orbitRadius: 0.92, orbitSpeed: 0.07, scale: 0.03 },
+  { id: 'iss', file: 'iss.glb', label: 'ISS — International Space Station', parent: 'earth', orbitRadius: 1.35, orbitSpeed: 0.08, scale: 0.012 },
+  { id: 'hubble', file: 'hubble.glb', label: 'Hubble Space Telescope', parent: 'earth', orbitRadius: 1.28, orbitSpeed: -0.06, scale: 0.010 },
+  { id: 'apollo', file: 'apollo-lm.glb', label: 'Apollo Lunar Module', parent: 'moon', orbitRadius: 0.42, orbitSpeed: 0.04, scale: 0.009 },
+  { id: 'voyager', file: 'voyager.glb', label: 'Voyager 1 — Interstellar Probe', parent: 'free', orbitRadius: 84, orbitSpeed: 0.0012, scale: 0.018 },
+  { id: 'parker', file: 'parker.glb', label: 'Parker Solar Probe — Touching the Sun', parent: 'sun', orbitRadius: 5.2, orbitSpeed: 0.09, scale: 0.010 },
+  { id: 'mro', file: 'mro.glb', label: 'Mars Reconnaissance Orbiter', parent: 'mars', orbitRadius: 0.78, orbitSpeed: 0.07, scale: 0.011 },
 ];
 
 export class SpacecraftManager {
@@ -45,11 +45,11 @@ export class SpacecraftManager {
         const size = new THREE.Vector3(); box.getSize(size);
         const max = Math.max(size.x, size.y, size.z);
         const s = c.scale * (max ? 1 : 1);
-        // Actually GLBs from NASA are in meters, need small scale
-        root.scale.setScalar(s * 0.6);
+        // Normalize: NASA models are in meters — need tiny scale for kid view
+        root.scale.setScalar(s * 0.35);
         // center
         const center = new THREE.Vector3(); box.getCenter(center);
-        root.position.sub(center.multiplyScalar(s * 0.6));
+        root.position.sub(center.multiplyScalar(s * 0.35));
 
         // add subtle emissive trail?
         const wrapper = new THREE.Group();

@@ -1,5 +1,6 @@
 import './style.css';
 import { PLANETS, PlanetData } from './data/planets';
+import { DWARF_PLANETS, ASTEROIDS } from './data/dwarfPlanets';
 import { BEYOND_OBJECTS, BeyondObject } from './data/beyond';
 import { SpaceScene } from './three/scene';
 import manifest from './data/githubManifest.json';
@@ -62,29 +63,32 @@ function showToast(msg: string, timeout=2200){
   (toast as any)._t = setTimeout(()=> toast.classList.remove('is-visible'), timeout);
 }
 
-const PLANET_EMOJI: Record<string, string> = {
-  sun: '☀️',
-  mercury: '☿',
-  venus: '♀',
-  earth: '🌍',
-  mars: '♂',
-  jupiter: '♃',
-  saturn: '♄',
-  uranus: '♅',
-  neptune: '♆',
-  pluto: '♇',
-};
-function planetEmoji(id: string){ return PLANET_EMOJI[id] ?? '●'; }
+function iconStyle(id:string, color:string, size:'sm'|'md'|'lg'|'rail'='rail'): string {
+  // Use real texture if exists as background, else color gradient
+  const texMap: Record<string,string> = {
+    sun:'sun.jpg', mercury:'mercury.jpg', venus:'venus.jpg', earth:'earth.jpg',
+    mars:'mars.jpg', jupiter:'jupiter.jpg', saturn:'saturn.jpg', uranus:'uranus.jpg',
+    neptune:'neptune.jpg', moon:'moon.jpg', pluto:'saturn.jpg' // fallback
+  };
+  const file = texMap[id];
+  if(file){
+    return `background-image:url(./textures/${file}); background-size:cover; background-position:center; color:${color}`;
+  }
+  return `background:radial-gradient(circle at 28% 28%, ${color} 0%, ${color} 65%, #0B1220 100%); color:${color}`;
+}
 
 function renderRail(filter=''){
   railList.innerHTML='';
-  const list = filter ? PLANETS.filter(p=> p.name.toLowerCase().includes(filter.toLowerCase()) || p.id.includes(filter.toLowerCase())) : PLANETS;
-  for(const p of list){
+  const allBodies = [...PLANETS, ...DWARF_PLANETS.map(d=> ({...d, type: d.type} as any)), ...ASTEROIDS.map(a=> ({...a, name: a.name, id: a.id, color: a.color, type: a.type} as any))];
+  const list = filter ? allBodies.filter(p=> p.name.toLowerCase().includes(filter.toLowerCase()) || p.id.includes(filter.toLowerCase())) : allBodies;
+  // Limit to first 20 to keep rail scrollable
+  const display = filter ? list : list.slice(0, 26);
+  for(const p of display){
     const btn=document.createElement('button');
     btn.className='rail-btn';
     btn.dataset.id=p.id;
     btn.innerHTML=`
-      <span class="rail-dot" style="background:${p.color}; color:${p.color}"></span>
+      <span class="icon-sphere rail" style="${iconStyle(p.id, p.color, 'rail')}"></span>
       <b>${p.name==='The Sun' ? 'Sun' : p.name}</b>
       <small>${p.type.split(' ')[0]}</small>
     `;
@@ -109,17 +113,17 @@ function setActiveRail(id: string | null){
     const bid=(b as HTMLElement).dataset.id;
     b.classList.toggle('is-active', bid===id);
   });
-  const p= PLANETS.find(x=> x.id===id);
+  const p= PLANETS.find(x=> x.id===id) ?? DWARF_PLANETS.find(x=> x.id===id) as any ?? ASTEROIDS.find(x=> x.id===id) as any;
   statFocus.textContent = p ? p.name : (scene?.isBeyond ? 'Beyond — Interstellar Space' : 'Solar System');
 }
 
 function renderHeroPeek(){
   heroPeek.innerHTML='';
-  const picks = PLANETS.filter(p=> ['earth','mars','jupiter','saturn','neptune','sun','uranus','pluto'].includes(p.id)).slice(0,8);
+  const picks = [...PLANETS.filter(p=> ['earth','mars','jupiter','saturn','neptune','sun','uranus','pluto'].includes(p.id)), ...DWARF_PLANETS.slice(0,2)].slice(0,8);
   for(const p of picks){
     const el=document.createElement('button');
     el.className='peek-item';
-    el.innerHTML=`<div class="peek-dot" style="background:${p.color}; color:${p.color};"></div><b>${p.name.replace('The ','')}</b><span>${p.subtitle}</span>`;
+    el.innerHTML=`<div class="icon-sphere sm" style="${iconStyle(p.id, p.color, 'sm')}"></div><b>${p.name.replace('The ','')}</b><span>${p.subtitle}</span>`;
     el.addEventListener('click', ()=>{
       ensureEntered();
       if(scene.isBeyond) toggleBeyond(false);
@@ -151,16 +155,68 @@ function renderBeyondLegend(){
 
 function openSheet(id: string){
   const data = PLANETS.find(p=> p.id===id) as PlanetData | undefined;
+  const dwarf = DWARF_PLANETS.find(d=> d.id===id) as any;
+  const asteroid = ASTEROIDS.find(a=> a.id===id) as any;
   const beyond = BEYOND_OBJECTS.find(b=> b.id===id) as BeyondObject | undefined;
   const isCraft = ['iss','hubble','voyager','apollo','parker','mro'].includes(id);
   if(isCraft){
     renderCraftSheet(id);
   } else if(data) renderPlanetSheet(data);
+  else if(dwarf) renderDwarfSheet(dwarf);
+  else if(asteroid) renderAsteroidSheet(asteroid);
   else if(beyond) renderBeyondSheet(beyond);
   else return;
   currentSheetId = id;
   factsheet.classList.add('is-open');
   sheetScroll.scrollTop = 0;
+}
+
+function renderDwarfSheet(d: any){
+  setActiveRail(d.id);
+  sheetScroll.innerHTML = `
+    <div class="sheet-hero">
+      <div class="icon-sphere lg" style="${iconStyle(d.id, d.color, 'lg')}"></div>
+      <div>
+        <h2 class="sheet-title">${d.name}</h2>
+        <p class="sheet-subtitle">${d.subtitle}</p>
+        <div class="sheet-badges"><span class="badge accent">Dwarf Planet</span><span class="badge">${d.type}</span><span class="badge">${d.moonsCount} moons</span></div>
+      </div>
+    </div>
+    <div class="kid-callout"><span class="kid-dot" style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,${d.color});flex-shrink:0"></span> <span><b>For kids:</b> ${d.kidWow}</span></div>
+    <div class="fact-grid" style="margin-top:12px">
+      <div class="fact"><h4>Diameter</h4><p><b>${d.diameterKm.toLocaleString()} km</b></p></div>
+      <div class="fact"><h4>Distance</h4><p><b>${d.distanceAU} AU</b><br><small>${d.orbitPeriod}</small></p></div>
+      <div class="fact"><h4>Day</h4><p><b>${d.dayLength}</b></p></div>
+      <div class="fact"><h4>Discovered</h4><p><b>${d.year}</b><br><small>${d.discoverer}</small></p></div>
+    </div>
+    <ul class="bullet-list" style="margin-top:12px">
+      ${d.funFacts.map((f:string)=> `<li>${f}</li>`).join('')}
+    </ul>
+    <p style="color:var(--muted); font-size:12px; margin-top:10px">Composition: ${d.composition.join(' • ')}</p>
+    <div class="sheet-actions"><button class="sheet-btn primary" data-action="focus">Fly to ${d.name}</button><button class="sheet-btn" data-action="close">Close</button></div>
+  `;
+  sheetScroll.querySelector('[data-action="focus"]')?.addEventListener('click', ()=> scene.focusOnPlanet(d.id));
+  sheetScroll.querySelector('[data-action="close"]')?.addEventListener('click', ()=> closeSheet());
+}
+function renderAsteroidSheet(a: any){
+  setActiveRail(a.id);
+  sheetScroll.innerHTML = `
+    <div class="sheet-hero">
+      <div class="icon-sphere lg" style="${iconStyle(a.id, a.color, 'lg')}"></div>
+      <div>
+        <h2 class="sheet-title">${a.name}</h2>
+        <p class="sheet-subtitle">${a.subtitle}</p>
+        <div class="sheet-badges"><span class="badge accent">${a.type}</span><span class="badge">${a.diameterKm} km</span></div>
+      </div>
+    </div>
+    <div class="kid-callout"><span class="kid-dot" style="width:18px;height:18px;border-radius:50%;background:${a.color};flex-shrink:0"></span> <span><b>Asteroid:</b> Tiny worldlets — ${a.type}. Click drag orbits to move it!</span></div>
+    <ul class="bullet-list" style="margin-top:12px">
+      ${a.funFacts.map((f:string)=> `<li>${f}</li>`).join('')}
+    </ul>
+    <div class="sheet-actions"><button class="sheet-btn primary" data-action="focus">Fly to ${a.name}</button><button class="sheet-btn" data-action="close">Close</button></div>
+  `;
+  sheetScroll.querySelector('[data-action="focus"]')?.addEventListener('click', ()=> scene.focusOnPlanet(a.id));
+  sheetScroll.querySelector('[data-action="close"]')?.addEventListener('click', ()=> closeSheet());
 }
 function closeSheet(){
   factsheet.classList.remove('is-open');
@@ -180,18 +236,18 @@ function renderCraftSheet(id: string){
   const info = labels[id] ?? { name: id, desc: 'Real NASA model fetched from GitHub via api.github.com.', repo: 'nasa/NASA-3D-Resources' };
   sheetScroll.innerHTML = `
     <div class="sheet-hero">
-      <div class="sheet-planet-icon" style="background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00 68%); color:#FFD700">🛰️</div>
+      <div class="icon-sphere lg" style="background:radial-gradient(circle at 28% 28%, #FFF7CC 0%, #FFD700 22%, #FF8C00 62%); flex-shrink:0; color:#FFD700"></div>
       <div>
         <h2 class="sheet-title">${info.name}</h2>
         <p class="sheet-subtitle">Real NASA 3D Model • GLB from GitHub</p>
         <div class="sheet-badges"><span class="badge accent">Spacecraft</span><span class="badge">${info.repo.split(':')[0]}</span></div>
       </div>
     </div>
-    <div class="kid-callout"><i>🛰️</i> <span><b>Real 3D:</b> ${info.desc}<br><small>Fetched via <code>api.github.com</code> → <code>codeload.github.com</code> → saved to <code>public/models/${id}.glb</code></small></span></div>
+    <div class="kid-callout"><span class="kid-dot" style="width:22px;height:22px;border-radius:50%;background:#0B1220;display:inline-block;flex-shrink:0;background:radial-gradient(circle at 30% 30%,#fff,#FFD700)"></span> <span><b>Real 3D:</b> ${info.desc}<br><small>Fetched via <code>api.github.com</code> → <code>codeload.github.com</code> → saved to <code>public/models/${id}.glb</code></small></span></div>
     <p style="color:var(--muted); font-size:12px; margin:10px 0">These models are <b style="color:var(--text)">public domain NASA</b>, rendered with THREE.GLTFLoader + Draco. They orbit their parent body live — click Tour to watch them move.</p>
     <div class="sheet-actions">
-      <button class="sheet-btn primary" data-action="focusCraft">🎯 Follow ${info.name}</button>
-      <button class="sheet-btn" data-action="back">← Back</button>
+      <button class="sheet-btn primary" data-action="focusCraft">Follow ${info.name}</button>
+      <button class="sheet-btn" data-action="back">Back</button>
     </div>
     <p style="color:var(--muted); font-size:11px; margin-top:10px">Provenance: <code>${info.repo}</code> • SHA from <code>public/github-assets.json</code> • Fetched ${manifest.fetchedAt.slice(0,10)}</p>
   `;
@@ -215,7 +271,7 @@ function renderPlanetSheet(p: PlanetData){
   const earthDiameter = 12742;
   const moonsHtml = p.moons.length ? p.moons.map(m=> `
     <div class="moon-card">
-      <span style="font-size:20px">🌙</span>
+      <span class="icon-sphere sm" style="${iconStyle('moon',' #A0A0A0','sm')}; flex-shrink:0"></span>
       <div>
         <b>${m.name} <small style="color:var(--muted)">— ${m.diameterKm.toLocaleString()} km</small></b>
         <p>${m.fact} <br><small>Distance from ${p.name}: ${m.distanceKm.toLocaleString()} km • Discovered: ${m.discovered}</small></p>
@@ -226,7 +282,7 @@ function renderPlanetSheet(p: PlanetData){
   const quizQ = quizForPlanet(p);
   const quizHtml = quizQ ? `
     <div class="quiz-box" id="quizBox">
-      <h4>🧠 Quick quiz</h4>
+      <h4>Quick quiz</h4>
       <p>${quizQ.q}</p>
       ${quizQ.opts.map((o,i)=> `<button class="quiz-opt" data-qi="${i}">${o}</button>`).join('')}
       <div class="quiz-feedback" id="quizFeedback"></div>
@@ -234,14 +290,14 @@ function renderPlanetSheet(p: PlanetData){
   ` : '';
 
   // provenance badge if real texture loaded
-  const realBadgeHtml = scene?.realLoaded?.includes(p.id+'.jpg') || scene?.realLoaded?.includes(p.id) ? `<span class="badge" style="border-color:rgba(34,197,94,0.35); color:#22C55E">✓ Real texture from GitHub</span>` : `<span class="badge">Procedural fallback</span>`;
+  const realBadgeHtml = scene?.realLoaded?.includes(p.id+'.jpg') || scene?.realLoaded?.includes(p.id) ? `<span class="badge" style="border-color:rgba(34,197,94,0.35); color:#22C55E">Real texture from GitHub</span>` : `<span class="badge">Procedural fallback</span>`;
 
   const overviewContent = `
     <p style="color:var(--muted); font-size:13px; line-height:1.6; margin:10px 0 10px">
       ${p.type} • ${p.classification} • Discovered: ${p.discovered}
       <br><span style="color:var(--text)">${p.compareEarth}</span>
     </p>
-    <div class="kid-callout"><i>💡</i> <span><b>For kids:</b> ${p.kidWow}</span></div>
+    <div class="kid-callout"><span class="kid-dot" style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#FFD166);flex-shrink:0"></span> <span><b>For kids:</b> ${p.kidWow}</span></div>
     <div style="margin-top:12px">
       <h4 style="margin:0 0 6px; font:700 12px 'Space Grotesk'; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted)">What makes it special?</h4>
       <ul class="bullet-list">
@@ -250,7 +306,7 @@ function renderPlanetSheet(p: PlanetData){
     </div>
     ${quizHtml}
     <div class="sheet-actions">
-      <button class="sheet-btn primary" data-action="focus">🎯 Fly to ${p.name.replace('The ','')}</button>
+      <button class="sheet-btn primary" data-action="focus">Fly to ${p.name.replace('The ','')}</button>
       <button class="sheet-btn" data-action="compare">Compare to Earth</button>
     </div>
   `;
@@ -275,13 +331,13 @@ function renderPlanetSheet(p: PlanetData){
   const moonsContent = `
     <p style="color:var(--muted); font-size:13px; margin:0 0 8px">${p.name} has <b style="color:var(--text)">${p.moonsCount} moon${p.moonsCount===1?'':'s'}</b> confirmed.</p>
     ${moonsHtml}
-    ${p.hasRings? `<div style="margin-top:10px; background: rgba(255,210,100,0.10); border:1px solid rgba(255,210,100,0.22); border-radius:12px; padding:10px"><b>💍 Rings:</b> <span style="color:var(--muted); font-size:12px">${p.id==='saturn'?'Huge icy rings — 23 Earths wide, thinner than a house!': p.id==='jupiter'?'Faint dusty rings found 1979.': p.id==='uranus'?'Dark narrow rings, discovered 1977.': 'Faint arcs — still mysterious.'}</span></div>` : ''}
+    ${p.hasRings? `<div style="margin-top:10px; background: rgba(255,210,100,0.10); border:1px solid rgba(255,210,100,0.22); border-radius:12px; padding:10px"><b>Rings:</b> <span style="color:var(--muted); font-size:12px">${p.id==='saturn'?'Huge icy rings — 23 Earths wide, thinner than a house!': p.id==='jupiter'?'Faint dusty rings found 1979.': p.id==='uranus'?'Dark narrow rings, discovered 1977.': 'Faint arcs — still mysterious.'}</span></div>` : ''}
   `;
   const funContent = `
     <ul class="bullet-list">
       ${p.funFacts.map(f=> `<li>${f}</li>`).join('')}
     </ul>
-    <div class="kid-callout" style="margin-top:12px"><i>🚀</i> <span><b>Try this:</b> Ask an adult to find ${p.name} in sky — ${p.id==='earth'?'look down!': p.id==='mercury'?'low at sunset/sunrise': p.id==='venus'?'sunset/sunrise brightest “star”': p.id==='mars'?'reddish star': p.id==='jupiter'?'brightest star-like': p.id==='saturn'?'golden dot near Jupiter': p.id==='uranus'?'needs binoculars': p.id==='neptune'?'needs telescope': 'needs big telescope'}</span></div>
+    <div class="kid-callout" style="margin-top:12px"><span class="kid-dot" style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#6EA8FF);flex-shrink:0"></span> <span><b>Try this:</b> Ask an adult to find ${p.name} in sky — ${p.id==='earth'?'look down!': p.id==='mercury'?'low at sunset/sunrise': p.id==='venus'?'sunset/sunrise brightest “star”': p.id==='mars'?'reddish star': p.id==='jupiter'?'brightest star-like': p.id==='saturn'?'golden dot near Jupiter': p.id==='uranus'?'needs binoculars': p.id==='neptune'?'needs telescope': 'needs big telescope'}</span></div>
   `;
 
   let tabContent = '';
@@ -294,7 +350,7 @@ function renderPlanetSheet(p: PlanetData){
 
   sheetScroll.innerHTML = `
     <div class="sheet-hero" style="--planet-color: ${p.color}">
-      <div class="sheet-planet-icon" style="background: radial-gradient(circle at 30% 30%, ${p.color}, ${p.accent} 68%); color:${p.color}">${planetEmoji(p.id)}</div>
+      <div class="icon-sphere lg" style="${iconStyle(p.id, p.color, 'lg')}"></div>
       <div>
         <h2 class="sheet-title">${p.name}</h2>
         <p class="sheet-subtitle">${p.subtitle}</p>
@@ -342,8 +398,8 @@ function renderPlanetSheet(p: PlanetData){
           else if(bi===idx && !isCorrect) b.classList.add('is-wrong');
           (b as HTMLButtonElement).disabled=true;
         });
-        feedback.textContent = isCorrect ? `✅ ${quizQ!.explain}` : `❌ Not quite. ${quizQ!.explain}`;
-        if(isCorrect) showToast(`🌟 Correct! You know ${p.name} well!`);
+        feedback.textContent = isCorrect ? `${quizQ!.explain}` : `Not quite. ${quizQ!.explain}`;
+        if(isCorrect) showToast(`Correct! You know ${p.name} well!`);
       });
     });
   }
@@ -360,21 +416,21 @@ function renderBeyondSheet(b: BeyondObject){
   const typeBadge = `<span class="badge accent">${b.type}</span> <span class="badge">${b.distanceLy}</span>`;
   sheetScroll.innerHTML = `
     <div class="sheet-hero">
-      <div class="sheet-planet-icon" style="background: radial-gradient(circle at 30% 30%, ${b.color}, #0B1220 70%); color:${b.color}">◈</div>
+      <div class="icon-sphere lg" style="background:radial-gradient(circle at 28% 28%, ${b.color}, #0B1220 80%); color:${b.color}"></div>
       <div>
         <h2 class="sheet-title">${b.name}</h2>
         <p class="sheet-subtitle">${b.subtitle} ${b.constellation? `• ${b.constellation}`:''}</p>
         <div class="sheet-badges">${typeBadge}</div>
       </div>
     </div>
-    <div class="kid-callout"><i>✦</i> <span><b>Kid wow:</b> ${b.kidWow}</span></div>
+    <div class="kid-callout"><span class="kid-dot" style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,${b.color});flex-shrink:0"></span> <span><b>Kid wow:</b> ${b.kidWow}</span></div>
     <p style="color:var(--muted); font-size:12px; margin:10px 0 6px"><b style="color:var(--text)">${b.distanceNote}</b></p>
     <ul class="bullet-list">
       ${b.facts.map(f=> `<li>${f}</li>`).join('')}
     </ul>
     <div class="sheet-actions">
-      <button class="sheet-btn primary" data-action="focusBeyond">🎯 Fly to ${b.name}</button>
-      <button class="sheet-btn" data-action="backSolar">← Solar System</button>
+      <button class="sheet-btn primary" data-action="focusBeyond">Fly to ${b.name}</button>
+      <button class="sheet-btn" data-action="backSolar">Back to Solar System</button>
     </div>
   `;
   sheetScroll.querySelector('[data-action="focusBeyond"]')?.addEventListener('click', ()=> scene.focusBeyondObject(b.id));
@@ -401,10 +457,10 @@ function ensureEntered(){
   if(hasEntered) return;
   hasEntered=true;
   hero.classList.add('is-hidden');
-  showToast('🚀 Engines on! Drag to look, click planet to board. Try Tour or Drag-orbits!');
+  showToast('Engines on! Drag to look, click planet to board. Try Tour or Drag-orbits!');
 }
 function enterSolar(){ ensureEntered(); toggleBeyond(false); scene.clearFocus(); }
-function enterBeyond(){ ensureEntered(); toggleBeyond(true); showToast('◈ Warp complete — welcome to interstellar space!'); }
+function enterBeyond(){ ensureEntered(); toggleBeyond(true); showToast('Warp complete — welcome to interstellar space!'); }
 function toggleBeyond(on: boolean){
   if(on===scene.isBeyond) return;
   scene.toggleBeyond(on);
@@ -416,32 +472,34 @@ function toggleBeyond(on: boolean){
   } else {
     beyondHud.classList.remove('is-visible');
     btnBeyondTop.classList.remove('is-active');
-    btnRailBeyond.innerHTML='<span>◈</span> Go Beyond <small>Voyager’s view</small>';
+    btnRailBeyond.innerHTML='<span class="beyond-dot" style="width:10px;height:10px;border-radius:50%;background:#6EA8FF;box-shadow:0 0 8px #6EA8FF;display:inline-block;vertical-align:middle"></span> Go Beyond <small>Voyager’s view</small>';
     statFocus.textContent='Solar System';
   }
 }
 
 // Mini-map top-down canvas
 function drawMiniMap(){
+  if(!scene) return;
   const ctx = miniMapCanvas.getContext('2d')!;
   const w=120, h=120;
   ctx.clearRect(0,0,w,h);
   ctx.fillStyle='#0A0E22'; ctx.fillRect(0,0,w,h);
   // sun center
   ctx.fillStyle='#FDB813'; ctx.beginPath(); ctx.arc(w/2,h/2,3,0,Math.PI*2); ctx.fill();
-  // orbits and planets
-  for(const p of PLANETS){
-    if(p.id==='sun') continue;
+  // orbits and planets + dwarfs + asteroids
+  const allBodies = [...PLANETS.filter(p=> p.id!=='sun'), ...DWARF_PLANETS, ...ASTEROIDS];
+  for(const p of allBodies){
     const g = scene?.planetGroups.get(p.id);
     if(!g) continue;
-    const r = Math.min(54, (g.userData.orbitRadius / 70) * 54);
+    const r = Math.min(54, (g.userData.orbitRadius / 82) * 54);
     // orbit
-    ctx.strokeStyle= p.color; ctx.globalAlpha=0.35; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(w/2,h/2,r,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
+    ctx.strokeStyle= (p as any).color || '#888'; ctx.globalAlpha= (DWARF_PLANETS.find(d=> d.id===p.id) ? 0.22 : ASTEROIDS.find(a=> a.id===p.id) ? 0.10 : 0.35); ctx.lineWidth= (ASTEROIDS.find(a=> a.id===p.id) ? 0.5 : 1); ctx.beginPath(); ctx.arc(w/2,h/2,r,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
     // planet dot
     const ang = g.userData.curAngle ?? 0;
     const x = w/2 + Math.cos(ang)*r;
     const y = h/2 + Math.sin(ang)*r;
-    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(x,y, p.id==='jupiter'||p.id==='saturn'?2.2:1.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=(p as any).color || '#fff'; const dotR = (p.id==='jupiter'||p.id==='saturn'?2.2: DWARF_PLANETS.find(d=> d.id===p.id) ? 1.2 : ASTEROIDS.find(a=> a.id===p.id) ? 0.9 : 1.6);
+    ctx.beginPath(); ctx.arc(x,y, dotR,0,Math.PI*2); ctx.fill();
     if(scene.focusTarget===p.id){
       ctx.strokeStyle='white'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.stroke();
     }
@@ -462,10 +520,10 @@ function drawMiniMap(){
 function init(){
   let p=0;
   const iv=setInterval(()=>{
-    p+= Math.random()*18+6;
-    if(p>=100){ p=100; clearInterval(iv); loaderFill.style.width='100%'; setTimeout(()=> loader.classList.add('is-hidden'), 400); }
+    p+= Math.random()*26+14;
+    if(p>=100){ p=100; clearInterval(iv); loaderFill.style.width='100%'; setTimeout(()=> loader.classList.add('is-hidden'), 220); }
     else loaderFill.style.width=p+'%';
-  }, 120);
+  }, 65);
 
   setTimeout(()=>{
     scene = new SpaceScene(canvas);
@@ -475,7 +533,7 @@ function init(){
     };
     scene.onCraftClick = (id:string)=>{
       openSheet(id);
-      showToast(`🛰️ ${id.toUpperCase()} — real NASA model from GitHub! Click Follow to track.`);
+      showToast(`${id.toUpperCase()} — real NASA model from GitHub! Click Follow to track.`);
     };
     scene.onHover = (id:string|null)=>{
       if(id){
@@ -483,15 +541,15 @@ function init(){
         const beyond = BEYOND_OBJECTS.find(b=> b.id===id);
         const craft = ['iss','hubble','voyager','apollo','parker','mro'].includes(id);
         const name = craft ? id.toUpperCase()+' spacecraft' : planet ? planet.name : beyond ? beyond.name : id;
-        (document.getElementById('bbHint') as HTMLElement).textContent = `◉ ${name} — click to inspect`;
+        (document.getElementById('bbHint') as HTMLElement).textContent = `${name} — click to inspect`;
       } else {
-        (document.getElementById('bbHint') as HTMLElement).textContent = hasEntered ? `☄︎ Tip: Click Sun/Saturn, drag orbits ✋, try Tour ▶, double-click to dock.` : `Hover planet and click — or press Explore Space.`;
+        (document.getElementById('bbHint') as HTMLElement).textContent = hasEntered ? `Tip: Click Sun/Saturn, drag orbits, try Tour, double-click to dock.` : `Hover planet and click — or press Explore Space.`;
       }
     };
     scene.onTextureLoaded = (count, list)=>{
       realBadge.style.display='inline-block';
-      realBadge.textContent=`✓ ${count} real textures from GitHub`;
-      showToast(`✅ Loaded ${count} real planet textures from GitHub (KyleGough/solar-system)`);
+      realBadge.textContent=`${count} real textures from GitHub`;
+      showToast(`Loaded ${count} real planet textures from GitHub`);
       // also update about? 
     };
     scene.spherical.radius=58; scene.updateCameraPos();
@@ -513,7 +571,7 @@ function init(){
       btnPause.textContent = scene.paused ? '▶︎ Play' : '⏸︎ Pause';
       btnPause.style.background = scene.paused ? 'white' : '';
       btnPause.style.color = scene.paused ? '#0B1220' : '';
-      showToast(scene.paused ? '⏸︎ Paused' : '▶︎ Resumed');
+      showToast(scene.paused ? 'Paused' : 'Resumed');
     });
     chkOrbits.addEventListener('change', ()=> scene.setShowOrbits(chkOrbits.checked));
     chkLabels.addEventListener('change', ()=> scene.setShowLabels(chkLabels.checked));
@@ -523,7 +581,7 @@ function init(){
     chkSpacecraft.addEventListener('change', ()=> scene.setShowSpacecraft(chkSpacecraft.checked));
     chkDrag.addEventListener('change', ()=> {
       scene.setEnableDrag(chkDrag.checked);
-      showToast(chkDrag.checked ? '✋ Drag mode: grab a planet to move its orbit!' : 'Drag mode off');
+      showToast(chkDrag.checked ? 'Drag mode: grab a planet to move its orbit!' : 'Drag mode off');
     });
 
     btnExplore.addEventListener('click', enterSolar);
@@ -531,7 +589,7 @@ function init(){
     btnBeyondTop.addEventListener('click', ()=> toggleBeyond(!scene.isBeyond));
     btnRailBeyond.addEventListener('click', ()=> toggleBeyond(!scene.isBeyond));
     btnReturnSolar.addEventListener('click', ()=> toggleBeyond(false));
-    btnResetView.addEventListener('click', ()=> { scene.clearFocus(); closeSheet(); showToast('↺ View reset'); });
+    btnResetView.addEventListener('click', ()=> { scene.clearFocus(); closeSheet(); showToast('View reset'); });
     btnCloseSheet.addEventListener('click', closeSheet);
     heroScroll.addEventListener('click', ()=> { ensureEntered(); });
 
@@ -539,11 +597,11 @@ function init(){
     planetSearch.addEventListener('input', ()=> renderRail(planetSearch.value));
     btnTour.addEventListener('click', ()=>{
       if(tourActive){
-        scene.stopTour(); tourActive=false; btnTour.textContent='▶ Tour'; showToast('Tour stopped');
+        scene.stopTour(); tourActive=false; btnTour.textContent='Tour'; showToast('Tour stopped');
       } else {
-        tourActive=true; btnTour.textContent='⏹ Stop Tour'; btnTour.style.background='white'; btnTour.style.color='#0B1220';
+        tourActive=true; btnTour.textContent='Stop Tour'; btnTour.style.background='white'; btnTour.style.color='#0B1220';
         scene.startTour((id)=> { openSheet(id); setActiveRail(id); });
-        showToast('🎬 Tour started — visiting every planet');
+        showToast('Tour started — visiting every planet');
       }
     });
     btnScaleKid.addEventListener('click', ()=> {
@@ -603,14 +661,14 @@ function init(){
     };
 
     function triggerSupernova(){
-      showToast('💥 SUPERNOVA! Sun expands…');
+      showToast('SUPERNOVA! Sun expands…');
       scene.sun.scale.set(1.4,1.4,1.4);
       (scene.sun.material as any).emissiveIntensity=2.5;
       scene.scene.background=new THREE.Color(0xFF4500);
       setTimeout(()=>{
         scene.sun.scale.set(1,1,1); (scene.sun.material as any).emissiveIntensity=1.15;
         scene.scene.background=new THREE.Color(0x020510);
-        showToast('…and collapses. That’s how Betelgeuse will go!');
+        showToast('...and collapses. That is how Betelgeuse will go!');
       }, 2200);
     }
 

@@ -8,114 +8,113 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
-  <script type="module" crossorigin src="./assets/index-5VaJh_KA.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DejY6E8w.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9673;</text></svg>">
+  <style>
+    /* critical inline to avoid white flash before CSS loads */
+    html,body{margin:0;height:100%;background:#020510;color:#E6EFFF;font-family:Outfit,system-ui,sans-serif;overflow:hidden}
+    #spaceCanvas{position:fixed;inset:0;display:block;width:100%;height:100%}
+    .loader{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:
+      radial-gradient(800px 600px at 70% 20%, rgba(80,100,255,0.18), transparent 60%),
+      radial-gradient(900px 700px at 10% 90%, rgba(255,180,80,0.12), transparent 60%),
+      linear-gradient(180deg,#020510 0%,#070B22 100%)}
+    .loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .4s}
+    .loader-ring{width:96px;height:96px;border-radius:50%;border:2px solid rgba(120,140,220,0.28);display:grid;place-items:center;position:relative}
+    .loader-ring::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;border-top-color:#6EA8FF;animation:spin .9s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 16px;background:linear-gradient(180deg,rgba(6,10,28,0.92),rgba(6,10,28,0.42));backdrop-filter:blur(14px);border-bottom:1px solid rgba(120,140,220,0.18)}
+    .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(1200px 800px at 50% 50%,transparent 58%,rgba(2,5,16,0.55) 92%)}
+  </style>
+  <script type="module" crossorigin src="./assets/index-DmiTrwjS.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CsvdsGJQ.css">
 </head>
 <body>
-  <!-- loading -->
-  <div id="loader" class="loader">
-    <div class="loader-inner">
-      <div class="loader-ring"><span class="loader-planet"></span></div>
-      <p class="loader-text">Charting orbits...</p>
-      <p class="loader-sub">building Saturn’s rings, mixing Mars dust, cooling Neptune’s winds</p>
-      <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+  <!-- loading — shows for ~600ms then auto-hides, never boring white -->
+  <div id="loader" class="loader" aria-live="polite">
+    <div class="loader-inner" style="text-align:center;max-width:520px;padding:24px">
+      <div class="loader-ring"><span class="loader-planet" style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#6EA8FF,#2E5BFF 70%);box-shadow:0 0 18px rgba(80,120,255,0.55);display:block"></span></div>
+      <p class="loader-text" style="font-family:Space Grotesk,sans-serif;font-weight:700;margin:10px 0 6px">Igniting starlight...</p>
+      <p class="loader-sub" style="color:#9AA8D0;font-size:13px;margin:0 0 14px">Fetching real NASA models & textures from GitHub</p>
+      <div class="loader-bar" style="height:6px;background:rgba(120,140,220,0.14);border-radius:999px;overflow:hidden"><div class="loader-fill" id="loaderFill" style="height:100%;width:0%;background:linear-gradient(90deg,#6EA8FF,#8B5CF6);transition:width .2s"></div></div>
     </div>
   </div>
 
-  <!-- 3D canvas -->
+  <!-- 3D canvas — always visible behind hero, no boring html -->
   <canvas id="spaceCanvas" aria-label="3D Solar System"></canvas>
-
-  <!-- nebula background gradient overlay subtle -->
   <div class="vignette" aria-hidden="true"></div>
 
   <!-- Top Navigation -->
   <header class="topbar" id="topbar">
-    <div class="topbar-left">
-      <div class="brand">
-        <div class="brand-icon">✦</div>
+    <div class="topbar-left" style="display:flex;align-items:center;gap:18px">
+      <div class="brand" style="display:flex;align-items:center;gap:10px">
+        <div class="brand-icon" aria-hidden="true" style="width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#6EA8FF,#8B5CF6);position:relative;overflow:hidden">
+          <span class="brand-sphere" style="width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 28% 28%,#fff 0%,#AFC8FF 18%,#2E5BFF 62%);box-shadow:0 0 10px rgba(110,168,255,0.8);display:block"></span>
+          <span class="brand-ring" style="position:absolute;inset:6px;border:1.2px solid rgba(255,255,255,0.55);border-radius:50%;transform:rotateX(68deg) scaleY(0.55)"></span>
+        </div>
         <div class="brand-text">
-          <strong>SPACE <span>4 KIDS</span></strong>
-          <em>explore • learn • wonder</em>
+          <strong style="font-family:Space Grotesk,sans-serif;font-weight:800;letter-spacing:.08em;font-size:14px;display:block;line-height:1">SPACE <span style="color:#FFD166">4 KIDS</span></strong>
+          <em style="font-style:normal;color:#9AA8D0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600">explore • learn • wonder</em>
         </div>
       </div>
-      <nav class="topbar-nav" aria-label="Main">
+      <nav class="topbar-nav" aria-label="Main" style="display:flex;gap:6px">
         <button class="nav-link is-active" data-view="solar">Solar System</button>
-        <button class="nav-link" id="btnBeyondTop">Beyond →</button>
+        <button class="nav-link" id="btnBeyondTop">Beyond</button>
         <button class="nav-link" id="btnAbout">About</button>
       </nav>
     </div>
-    <div class="topbar-right">
-      <div class="topbar-stats" id="topbarStats">
-        <span class="stat"><i>◉</i> <b id="statFocus">Solar System</b></span>
-        <span class="stat"><i>◎</i> <b id="statTime">1×</b> time</span>
+    <div class="topbar-right" style="display:flex;align-items:center;gap:10px">
+      <div class="topbar-stats" id="topbarStats" style="display:flex;gap:10px">
+        <span class="stat" style="display:flex;gap:6px;align-items:center;background:rgba(255,255,255,0.06);border:1px solid rgba(120,140,220,0.18);padding:6px 10px;border-radius:999px;font-size:12px"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:#6EA8FF;box-shadow:0 0 6px #6EA8FF"></span> <b id="statFocus">Solar System</b></span>
+        <span class="stat" style="display:flex;gap:6px;align-items:center;background:rgba(255,255,255,0.06);border:1px solid rgba(120,140,220,0.18);padding:6px 10px;border-radius:999px;font-size:12px"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:#FFD166;box-shadow:0 0 6px #FFD166"></span> <b id="statTime">1×</b> time</span>
       </div>
-      <button class="icon-btn" id="btnResetView" title="Reset camera (R)">⟲ Reset</button>
-      <button class="icon-btn ghost" id="btnSound" title="Toggle soundtrack">♫</button>
+      <button class="icon-btn" id="btnResetView" title="Reset camera (R)">Reset View</button>
+      <button class="icon-btn ghost" id="btnSound" title="Toggle soundtrack">Audio</button>
     </div>
   </header>
 
-  <!-- Landing Hero (covers canvas until Explore) -->
-  <section class="hero" id="hero">
-    <div class="hero-bg" aria-hidden="true">
-      <div class="hero-stars"></div>
-      <div class="hero-glow"></div>
-      <div class="hero-orbit hero-orbit-1"></div>
-      <div class="hero-orbit hero-orbit-2"></div>
-      <div class="hero-orbit hero-orbit-3"></div>
+  <!-- Hero — glass overlay, canvas still visible behind, dismisses instantly -->
+  <section class="hero" id="hero" style="position:fixed;inset:0;z-index:18;display:grid;grid-template-columns:1.2fr .85fr;gap:28px;padding:78px 28px 28px;background:transparent;transition:opacity .28s,visibility .28s,transform .28s">
+    <div class="hero-bg" aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden">
+      <div class="hero-stars" style="position:absolute;inset:0;opacity:.85;background:radial-gradient(2px 2px at 12% 18%,white 50%,transparent 52%),radial-gradient(1.6px 1.6px at 28% 72%,white 50%,transparent 52%)"></div>
+      <div class="hero-glow" style="position:absolute;width:900px;height:900px;left:-120px;top:-180px;background:radial-gradient(circle,rgba(110,168,255,0.12),transparent 62%)"></div>
     </div>
 
-    <div class="hero-card">
-      <div class="eyebrow"><span class="dot"></span> 100% KID-MADE FOR CURIOSITY • NO AI GIMMICKS • JUST SPACE</div>
-      <h1>
+    <div class="hero-card" style="position:relative;align-self:center;background:linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,244,255,0.92));color:#0B1220;border-radius:24px;padding:26px 26px 18px;box-shadow:0 12px 40px rgba(0,0,0,0.55);max-width:720px;border:1px solid rgba(255,255,255,0.9)">
+      <div class="eyebrow" style="display:inline-flex;gap:8px;align-items:center;font:700 11px/1 Space Grotesk,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4B5A8A;background:rgba(110,168,255,0.10);border:1px solid rgba(110,168,255,0.18);padding:7px 10px;border-radius:999px"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:#22C55E;box-shadow:0 0 0 6px rgba(34,197,94,0.15)"></span> 100% real 3D • fetched from GitHub • no AI gimmicks</div>
+      <h1 style="font-family:Space Grotesk,sans-serif;font-weight:800;line-height:.95;margin:14px 0 10px;font-size:clamp(36px,5.5vw,58px);letter-spacing:-0.03em;color:#0B1220">
         Space is
-        <span class="h1-grad">for kids.</span>
-        <span class="h1-sub">And you’re cleared for launch.</span>
+        <span class="h1-grad" style="background:linear-gradient(90deg,#2E5BFF,#8B5CF6 60%,#FF7A00);-webkit-background-clip:text;background-clip:text;color:transparent">for kids.</span>
+        <span class="h1-sub" style="display:block;font-size:clamp(16px,2.2vw,20px);font-weight:600;color:#3A4A7A;margin-top:8px">3D Solar System is already rendering behind this card.</span>
       </h1>
-      <p class="hero-lead">
-        Click <b>Explore Space</b> and fly through a living Solar System. Every planet is 3D, every fact is real, and you can go <em>way</em> beyond the Sun if you’re brave.
+      <p class="hero-lead" style="color:#34466E;font-size:15.5px;line-height:1.55;margin:12px 0 18px;max-width:62ch">
+        The canvas is live. Click <b>Enter Orbit</b> to dismiss this panel and fly — or peek the planets below.
       </p>
 
-      <div class="hero-cta-row">
-        <button class="cta-primary" id="btnExplore">
-          <span class="cta-icon">🚀</span> Explore Space
-          <span class="cta-arrow">→</span>
+      <div class="hero-cta-row" style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 16px">
+        <button class="cta-primary" id="btnExplore" style="appearance:none;border:none;cursor:pointer;font:700 16px/1 Outfit,sans-serif;display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#2E5BFF,#8B5CF6);color:white;padding:14px 18px;border-radius:14px;box-shadow:0 10px 22px rgba(46,91,255,0.35)">
+          <span class="cta-sphere" style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#FFD166 45%,#FF7A00);box-shadow:0 0 8px rgba(255,210,100,0.8)"></span> Enter Orbit
+          <span class="cta-arrow" style="margin-left:4px;background:rgba(255,255,255,0.16);width:28px;height:28px;display:grid;place-items:center;border-radius:999px;font-weight:800">→</span>
         </button>
-        <button class="cta-secondary" id="btnHeroBeyond">I’m brave → Go Beyond</button>
+        <button class="cta-secondary" id="btnHeroBeyond" style="appearance:none;border:1px solid rgba(120,140,220,0.18);background:rgba(255,255,255,0.68);color:#0B1220;font:700 13px/1 Outfit;padding:12px 14px;border-radius:12px;cursor:pointer">Go Beyond</button>
       </div>
 
-      <div class="hero-mini-grid">
-        <div class="mini"><b>8</b> planets + Sun & Pluto <span>each with 7+ facts</span></div>
-        <div class="mini"><b>146</b> Saturn moons <span>real scale & tilted orbits</span></div>
-        <div class="mini"><b>11</b> deep-space wonders <span>from Proxima to Andromeda</span></div>
-      </div>
-
-      <div class="hero-trust">
-        <span>Made for classrooms & living rooms</span>
-        <span class="sep">•</span>
-        <span>Keyboard & touch friendly</span>
-        <span class="sep">•</span>
-        <span>Works offline after load</span>
+      <div class="hero-mini-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px">
+        <div class="mini" style="background:rgba(11,18,32,0.06);border:1px solid rgba(11,18,32,0.08);border-radius:14px;padding:12px"><b style="font-family:Space Grotesk,sans-serif;font-size:18px;display:block; color:#0B1220">8+6</b><span style="font-size:12px;color:#5A6B96">planets + dwarf planets</span></div>
+        <div class="mini" style="background:rgba(11,18,32,0.06);border:1px solid rgba(11,18,32,0.08);border-radius:14px;padding:12px"><b style="font-family:Space Grotesk,sans-serif;font-size:18px;display:block; color:#0B1220">6</b><span style="font-size:12px;color:#5A6B96">NASA spacecraft GLBs</span></div>
+        <div class="mini" style="background:rgba(11,18,32,0.06);border:1px solid rgba(11,18,32,0.08);border-radius:14px;padding:12px"><b style="font-family:Space Grotesk,sans-serif;font-size:18px;display:block; color:#0B1220">15</b><span style="font-size:12px;color:#5A6B96">real textures from GitHub</span></div>
       </div>
     </div>
 
-    <div class="hero-side">
-      <div class="planet-peek">
-        <div class="peek-header">Look inside</div>
-        <div class="peek-planets" id="heroPeek">
-          <!-- filled via JS -->
-        </div>
-        <p class="peek-hint">Hint: you can drag to orbit, scroll to zoom, click any planet to dock.</p>
+    <div class="hero-side" style="position:relative;align-self:center;display:grid;gap:14px">
+      <div class="planet-peek" style="background:rgba(12,16,34,0.88);backdrop-filter:blur(14px);border:1px solid rgba(120,140,220,0.18);border-radius:18px;padding:14px">
+        <div class="peek-header" style="font:700 11px/1 Space Grotesk,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#9AA8D0">Look inside — 3D previews already loaded</div>
+        <div class="peek-planets" id="heroPeek" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px"></div>
+        <p class="peek-hint" style="color:#9AA8D0;font-size:12px;margin:10px 0 0">The 3D scene is behind this card. Click a preview to jump.</p>
       </div>
-      <div class="quote-card">
-        <p>“We are made of star-stuff.”</p>
-        <cite>— Carl Sagan</cite>
+      <div class="quote-card" style="background:linear-gradient(135deg,rgba(110,168,255,0.14),rgba(139,92,246,0.14));border:1px solid rgba(120,140,220,0.18);border-radius:18px;padding:14px 16px">
+        <p style="margin:0;font-family:Space Grotesk,sans-serif;font-weight:600;font-size:14px;color:#E6EFFF">We are made of star-stuff.</p>
+        <cite style="color:#9AA8D0;font-style:normal;font-size:12px">— Carl Sagan</cite>
       </div>
     </div>
-
-    <button class="hero-scroll" id="heroScroll" aria-label="Scroll hint">
-      <span>Scroll to peek</span> <i>↓</i>
-    </button>
   </section>
 
   <!-- Left Rail: Planet Navigator -->
@@ -125,7 +124,7 @@
     <div class="rail-list" id="railList"></div>
     <div class="rail-foot">
       <button class="rail-beyond" id="btnRailBeyond" title="Warp beyond the heliopause">
-        <span>◈</span> Go Beyond
+        <span class="beyond-dot" style="width:10px;height:10px;border-radius:50%;background:#6EA8FF;box-shadow:0 0 8px #6EA8FF;display:inline-block;vertical-align:middle"></span> Go Beyond
         <small>Voyager’s view</small>
       </button>
       <p class="rail-hint">Drag = orbit<br>Scroll = zoom<br>Click = facts<br>Dbl-click = tour</p>
@@ -136,34 +135,34 @@
   <div class="bottom-bar" id="bottomBar">
     <div class="bb-left">
       <div class="time-controls">
-        <button class="tbtn" id="btnPause" title="Space = pause">⏸︎ Pause</button>
+        <button class="tbtn" id="btnPause" title="Space = pause">Pause</button>
         <div class="tgroup" role="group" aria-label="Time speed">
           <button class="tseg is-active" data-speed="1">1×</button>
           <button class="tseg" data-speed="10">10×</button>
           <button class="tseg" data-speed="50">50×</button>
           <button class="tseg" data-speed="200">200×</button>
         </div>
-        <button class="tbtn" id="btnTour" title="Auto tour all planets">▶ Tour</button>
+        <button class="tbtn" id="btnTour" title="Auto tour all planets">Tour</button>
       </div>
       <div class="toggle-row">
         <label class="switch"><input type="checkbox" id="chkOrbits" checked> <span>Orbits</span></label>
         <label class="switch"><input type="checkbox" id="chkLabels" checked> <span>Labels</span></label>
         <label class="switch"><input type="checkbox" id="chkMotion" checked> <span>Motion blur</span></label>
         <label class="switch"><input type="checkbox" id="chkSpacecraft" checked> <span>Spacecraft</span></label>
-        <label class="switch"><input type="checkbox" id="chkDrag"> <span>Drag orbits ✋</span></label>
+        <label class="switch"><input type="checkbox" id="chkDrag"> <span>Drag orbits</span></label>
       </div>
     </div>
     <div class="bb-center">
-      <p class="bb-hint" id="bbHint">☄︎ Tip: Click the Sun for its secrets, or Saturn for its 146 moons. Press <kbd>O</kbd> to hide orbits, <kbd>Space</kbd> to pause.</p>
+      <p class="bb-hint" id="bbHint">Tip: Click the Sun for its secrets, or Saturn for its 146 moons. Press O to hide orbits, Space to pause.</p>
       <div class="bb-extra" style="margin-top:6px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap">
         <button class="tbtn small" id="btnScaleKid" style="background:white; color:#0B1220">Kid Scale</button>
         <button class="tbtn small" id="btnScaleReal">True Scale</button>
-        <button class="tbtn small" id="btnResetOrbits">↺ Reset Orbits</button>
-        <button class="tbtn small" id="btnCompare">◐ Compare</button>
-        <span class="bb-badge" id="realBadge" style="font:600 11px Outfit; color:var(--accent); background:rgba(110,168,255,0.14); border:1px solid rgba(110,168,255,0.28); padding:6px 8px; border-radius:999px; display:none">Fetching real textures…</span>
+        <button class="tbtn small" id="btnResetOrbits">Reset Orbits</button>
+        <button class="tbtn small" id="btnCompare">Compare</button>
+        <span class="bb-badge" id="realBadge" style="font:600 11px Outfit; color:#6EA8FF; background:rgba(110,168,255,0.14); border:1px solid rgba(110,168,255,0.28); padding:6px 8px; border-radius:999px; display:none">Fetching real textures…</span>
       </div>
     </div>
-    <div class="bb-right">
+    <div class="bb-right" style="display:flex;align-items:center;gap:12px">
       <div class="scale-widget">
         <span class="scale-label">View</span>
         <div class="scale-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
@@ -177,16 +176,14 @@
 
   <!-- Right Fact Sheet -->
   <aside class="factsheet" id="factsheet" aria-live="polite" aria-label="Planet facts">
-    <button class="sheet-close" id="btnCloseSheet" aria-label="Close">✕</button>
-    <div class="sheet-scroll" id="sheetScroll">
-      <!-- injected via JS -->
-    </div>
+    <button class="sheet-close" id="btnCloseSheet" aria-label="Close">X</button>
+    <div class="sheet-scroll" id="sheetScroll"></div>
   </aside>
 
   <!-- Beyond overlay hint -->
   <div class="beyond-hud" id="beyondHud">
     <div class="beyond-hud-inner">
-      <h2>◈ Beyond the Solar System</h2>
+      <h2>Beyond the Solar System</h2>
       <p>You’re now <b>outside the heliopause</b> — where the Sun’s wind ends and interstellar space begins.<br>
         Each glowing point is a real star or wonder. Click any to inspect. <span class="beyond-hint">Scroll to drift deeper.</span></p>
       <div class="beyond-legend" id="beyondLegend"></div>
@@ -198,16 +195,16 @@
   <dialog class="about-dialog" id="aboutDialog">
     <div class="about-head">
       <h2>About Space for Kids</h2>
-      <button class="sheet-close" id="btnCloseAbout">✕</button>
+      <button class="sheet-close" id="btnCloseAbout">X</button>
     </div>
     <div class="about-body">
       <p><b>No AI fluff — real 3D from GitHub.</b> Planet textures fetched live from <code>KyleGough/solar-system</code> via GitHub API, spacecraft GLBs from <code>nasa/NASA-3D-Resources</code> (Voyager, Hubble, ISS, Apollo LM, Parker, MRO). Falls back to procedural canvas textures if offline.</p>
       <ul>
-        <li>Built in <b>TypeScript + Three.js</b> — single canvas, 15k stars, instanced asteroid belt, GLTFLoader + Draco.</li>
+        <li>Built in <b>TypeScript + Three.js</b> — single canvas, 15k stars, instanced asteroid belt, GLTFLoader + Draco. Dwarf planets + 6 asteroids included.</li>
         <li><b>Kid Scale / True Scale toggle</b> — see why real scale would be invisible; drag orbits to experiment.</li>
         <li>Orbits and rotations use real periods, sped up for observation. Click <b>Tour</b> for cinematic fly-by, double-click planet to dock.</li>
-        <li>“Beyond” distances are logarithmic — you’re seeing a map, not true emptiness. Real interstellar space is unimaginably emptier.</li>
-        <li>Spacecraft orbit their parents in real time — click ISS to inspect.</li>
+        <li>“Beyond” distances are logarithmic — you’re seeing a map, not true emptiness.</li>
+        <li>Spacecraft orbit their parents in real time — click ISS to inspect. All spacecraft now at 30% previous size.</li>
       </ul>
       <p class="about-foot">Made for curious kids (and adults who never stopped). If you spot a mistake, it’s a human one — tell us and we’ll fix it.</p>
       <p class="about-credits">Typefaces: Space Grotesk & Outfit. Data sources: NASA Planetary Fact Sheets, JPL Small-Body Database, Gaia DR3.</p>
