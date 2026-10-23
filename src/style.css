@@ -329,3 +329,32 @@ kbd{font-family: "JetBrains Mono", monospace; font-size: 0.78em; background: rgb
   .hero-card{padding:18px}
   .peek-planets{grid-template-columns: repeat(3, 1fr)}
 }
+/* additions for real models + interactivity */
+.rail-search{padding:6px 4px}
+.rail-search input{
+  width:100%; background: rgba(255,255,255,0.06); border:1px solid var(--line); color: var(--text);
+  font:500 12px Outfit; padding:8px 8px; border-radius:10px; outline:none;
+}
+.rail-search input:focus{border-color: rgba(110,168,255,0.45); background: rgba(255,255,255,0.10)}
+.rail-search input::placeholder{color: var(--muted)}
+
+.tbtn.small{font-size:11px; padding:7px 10px}
+.bb-badge{white-space:nowrap}
+.bb-extra .tbtn.small{border-radius:999px}
+
+.mini-map{
+  margin-left:12px; width:96px; height:96px; border-radius:12px; overflow:hidden;
+  border:1px solid var(--line); background: rgba(0,0,0,0.35); backdrop-filter: blur(6px);
+  display:grid; place-items:center;
+}
+.mini-map canvas{width:96px; height:96px; display:block}
+
+.compare-strip{
+  position:fixed; left:50%; top:68px; transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(16,20,42,0.96), rgba(10,14,34,0.96));
+  border:1px solid var(--line); border-radius:14px; padding:8px 12px; display:flex; gap:10px; align-items:center;
+  z-index:13; backdrop-filter: blur(12px); box-shadow: var(--shadow);
+}
+.compare-strip b{font:700 12px "Space Grotesk"}
+.compare-strip .bar{width:160px; height:8px; background: rgba(120,140,220,0.18); border-radius:999px; overflow:hidden}
+.compare-strip .fill{height:100%; background: linear-gradient(90deg, var(--accent), #8B5CF6)}

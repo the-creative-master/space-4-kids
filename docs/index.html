@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪐</text></svg>">
-  <script type="module" crossorigin src="./assets/index-eWcbV_Uo.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-DRh3CFDN.css">
+  <script type="module" crossorigin src="./assets/index-5VaJh_KA.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DejY6E8w.css">
 </head>
 <body>
   <!-- loading -->
@@ -121,13 +121,14 @@
   <!-- Left Rail: Planet Navigator -->
   <aside class="left-rail" id="leftRail" aria-label="Planet navigator">
     <div class="rail-label">Jump to</div>
+    <div class="rail-search"><input id="planetSearch" type="search" placeholder="Search planets…" aria-label="Search planets"></div>
     <div class="rail-list" id="railList"></div>
     <div class="rail-foot">
       <button class="rail-beyond" id="btnRailBeyond" title="Warp beyond the heliopause">
         <span>◈</span> Go Beyond
         <small>Voyager’s view</small>
       </button>
-      <p class="rail-hint">Drag = orbit<br>Scroll = zoom<br>Click = facts</p>
+      <p class="rail-hint">Drag = orbit<br>Scroll = zoom<br>Click = facts<br>Dbl-click = tour</p>
     </div>
   </aside>
 
@@ -142,21 +143,34 @@
           <button class="tseg" data-speed="50">50×</button>
           <button class="tseg" data-speed="200">200×</button>
         </div>
+        <button class="tbtn" id="btnTour" title="Auto tour all planets">▶ Tour</button>
       </div>
       <div class="toggle-row">
         <label class="switch"><input type="checkbox" id="chkOrbits" checked> <span>Orbits</span></label>
         <label class="switch"><input type="checkbox" id="chkLabels" checked> <span>Labels</span></label>
         <label class="switch"><input type="checkbox" id="chkMotion" checked> <span>Motion blur</span></label>
+        <label class="switch"><input type="checkbox" id="chkSpacecraft" checked> <span>Spacecraft</span></label>
+        <label class="switch"><input type="checkbox" id="chkDrag"> <span>Drag orbits ✋</span></label>
       </div>
     </div>
     <div class="bb-center">
       <p class="bb-hint" id="bbHint">☄︎ Tip: Click the Sun for its secrets, or Saturn for its 146 moons. Press <kbd>O</kbd> to hide orbits, <kbd>Space</kbd> to pause.</p>
+      <div class="bb-extra" style="margin-top:6px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap">
+        <button class="tbtn small" id="btnScaleKid" style="background:white; color:#0B1220">Kid Scale</button>
+        <button class="tbtn small" id="btnScaleReal">True Scale</button>
+        <button class="tbtn small" id="btnResetOrbits">↺ Reset Orbits</button>
+        <button class="tbtn small" id="btnCompare">◐ Compare</button>
+        <span class="bb-badge" id="realBadge" style="font:600 11px Outfit; color:var(--accent); background:rgba(110,168,255,0.14); border:1px solid rgba(110,168,255,0.28); padding:6px 8px; border-radius:999px; display:none">Fetching real textures…</span>
+      </div>
     </div>
     <div class="bb-right">
       <div class="scale-widget">
         <span class="scale-label">View</span>
         <div class="scale-dots"><span class="on"></span><span class="on"></span><span class="on"></span><span></span></div>
-        <small>Kid Scale (visible) • Real scale would be invisible!</small>
+        <small id="scaleHint">Kid Scale (visible) • Real scale would be invisible!</small>
+      </div>
+      <div class="mini-map" id="miniMap" title="Top-down orbital map">
+        <canvas id="miniMapCanvas" width="120" height="120"></canvas>
       </div>
     </div>
   </div>
@@ -187,12 +201,13 @@
       <button class="sheet-close" id="btnCloseAbout">✕</button>
     </div>
     <div class="about-body">
-      <p><b>No AI fluff.</b> Every fact was written and checked against NASA, ESA, and JPL data (2024). Textures are procedurally drawn — no scraped images.</p>
+      <p><b>No AI fluff — real 3D from GitHub.</b> Planet textures fetched live from <code>KyleGough/solar-system</code> via GitHub API, spacecraft GLBs from <code>nasa/NASA-3D-Resources</code> (Voyager, Hubble, ISS, Apollo LM, Parker, MRO). Falls back to procedural canvas textures if offline.</p>
       <ul>
-        <li>Built in <b>TypeScript + Three.js</b> — single canvas, 15k stars, instanced asteroid belt.</li>
-        <li>Planet sizes are <b>kid-scale (exaggerated)</b> so you can actually see Mercury vs Jupiter. Distances are compressed but proportional.</li>
-        <li>Orbits and rotations use real periods, sped up for observation.</li>
+        <li>Built in <b>TypeScript + Three.js</b> — single canvas, 15k stars, instanced asteroid belt, GLTFLoader + Draco.</li>
+        <li><b>Kid Scale / True Scale toggle</b> — see why real scale would be invisible; drag orbits to experiment.</li>
+        <li>Orbits and rotations use real periods, sped up for observation. Click <b>Tour</b> for cinematic fly-by, double-click planet to dock.</li>
         <li>“Beyond” distances are logarithmic — you’re seeing a map, not true emptiness. Real interstellar space is unimaginably emptier.</li>
+        <li>Spacecraft orbit their parents in real time — click ISS to inspect.</li>
       </ul>
       <p class="about-foot">Made for curious kids (and adults who never stopped). If you spot a mistake, it’s a human one — tell us and we’ll fix it.</p>
       <p class="about-credits">Typefaces: Space Grotesk & Outfit. Data sources: NASA Planetary Fact Sheets, JPL Small-Body Database, Gaia DR3.</p>

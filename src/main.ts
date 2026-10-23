@@ -2,6 +2,8 @@ import './style.css';
 import { PLANETS, PlanetData } from './data/planets';
 import { BEYOND_OBJECTS, BeyondObject } from './data/beyond';
 import { SpaceScene } from './three/scene';
+import manifest from './data/githubManifest.json';
+import * as THREE from 'three';
 
 // DOM refs
 const canvas = document.getElementById('spaceCanvas') as HTMLCanvasElement;
@@ -15,8 +17,6 @@ const btnAbout = document.getElementById('btnAbout') as HTMLButtonElement;
 const btnResetView = document.getElementById('btnResetView') as HTMLButtonElement;
 const railList = document.getElementById('railList')!;
 const heroPeek = document.getElementById('heroPeek')!;
-const leftRail = document.getElementById('leftRail')!;
-const bottomBar = document.getElementById('bottomBar')!;
 const factsheet = document.getElementById('factsheet')!;
 const sheetScroll = document.getElementById('sheetScroll')!;
 const btnCloseSheet = document.getElementById('btnCloseSheet')!;
@@ -24,7 +24,8 @@ const btnPause = document.getElementById('btnPause')!;
 const chkOrbits = document.getElementById('chkOrbits') as HTMLInputElement;
 const chkLabels = document.getElementById('chkLabels') as HTMLInputElement;
 const chkMotion = document.getElementById('chkMotion') as HTMLInputElement;
-const topbarStats = document.getElementById('topbarStats')!;
+const chkSpacecraft = document.getElementById('chkSpacecraft') as HTMLInputElement;
+const chkDrag = document.getElementById('chkDrag') as HTMLInputElement;
 const statFocus = document.getElementById('statFocus')!;
 const statTime = document.getElementById('statTime')!;
 const toast = document.getElementById('toast')!;
@@ -35,16 +36,25 @@ const heroScroll = document.getElementById('heroScroll')!;
 const aboutDialog = document.getElementById('aboutDialog') as HTMLDialogElement;
 const btnCloseAbout = document.getElementById('btnCloseAbout')!;
 const beyondLegend = document.getElementById('beyondLegend')!;
+const planetSearch = document.getElementById('planetSearch') as HTMLInputElement;
+const btnTour = document.getElementById('btnTour') as HTMLButtonElement;
+const btnScaleKid = document.getElementById('btnScaleKid') as HTMLButtonElement;
+const btnScaleReal = document.getElementById('btnScaleReal') as HTMLButtonElement;
+const btnResetOrbits = document.getElementById('btnResetOrbits') as HTMLButtonElement;
+const btnCompare = document.getElementById('btnCompare') as HTMLButtonElement;
+const realBadge = document.getElementById('realBadge') as HTMLElement;
+const scaleHint = document.getElementById('scaleHint') as HTMLElement;
+const miniMapCanvas = document.getElementById('miniMapCanvas') as HTMLCanvasElement;
 
 // State
 let hasEntered = false;
 let currentSheetId: string | null = null;
 let activeTab: 'overview'|'numbers'|'moons'|'fun' = 'overview';
-let quizState: Record<string, number> = {}; // planet id -> chosen index
+let tourActive = false;
+let compareMode = false;
 
 let scene: SpaceScene;
 
-// Helper: show toast
 function showToast(msg: string, timeout=2200){
   toast.textContent = msg;
   toast.classList.add('is-visible');
@@ -52,7 +62,6 @@ function showToast(msg: string, timeout=2200){
   (toast as any)._t = setTimeout(()=> toast.classList.remove('is-visible'), timeout);
 }
 
-// Build planet icon helpers (use unicode emoji fallback + colors)
 const PLANET_EMOJI: Record<string, string> = {
   sun: '☀️',
   mercury: '☿',
@@ -65,15 +74,12 @@ const PLANET_EMOJI: Record<string, string> = {
   neptune: '♆',
   pluto: '♇',
 };
+function planetEmoji(id: string){ return PLANET_EMOJI[id] ?? '●'; }
 
-function planetEmoji(id: string){
-  return PLANET_EMOJI[id] ?? '●';
-}
-
-// Render left rail
-function renderRail(){
+function renderRail(filter=''){
   railList.innerHTML='';
-  for(const p of PLANETS){
+  const list = filter ? PLANETS.filter(p=> p.name.toLowerCase().includes(filter.toLowerCase()) || p.id.includes(filter.toLowerCase())) : PLANETS;
+  for(const p of list){
     const btn=document.createElement('button');
     btn.className='rail-btn';
     btn.dataset.id=p.id;
@@ -84,13 +90,18 @@ function renderRail(){
     `;
     btn.addEventListener('click',()=>{
       ensureEntered();
-      // if in beyond and clicking solar planet, return first
       if(scene.isBeyond) toggleBeyond(false);
       scene.focusOnPlanet(p.id);
       openSheet(p.id);
       setActiveRail(p.id);
     });
     railList.appendChild(btn);
+  }
+  if(list.length===0){
+    const empty=document.createElement('div');
+    empty.style.cssText='text-align:center; color:var(--muted); font-size:12px; padding:10px';
+    empty.textContent='No matches';
+    railList.appendChild(empty);
   }
 }
 function setActiveRail(id: string | null){
@@ -102,14 +113,13 @@ function setActiveRail(id: string | null){
   statFocus.textContent = p ? p.name : (scene?.isBeyond ? 'Beyond — Interstellar Space' : 'Solar System');
 }
 
-// hero peek grid
 function renderHeroPeek(){
   heroPeek.innerHTML='';
   const picks = PLANETS.filter(p=> ['earth','mars','jupiter','saturn','neptune','sun','uranus','pluto'].includes(p.id)).slice(0,8);
   for(const p of picks){
     const el=document.createElement('button');
     el.className='peek-item';
-    el.innerHTML=`<div class="peek-dot" style="background:${p.color}; color:${p.color}; ${p.id==='saturn' ? 'box-shadow:0 0 0 3px rgba(255,255,255,0.12), 0 0 12px '+p.color : ''} "></div><b>${p.name.replace('The ','')}</b><span>${p.subtitle}</span>`;
+    el.innerHTML=`<div class="peek-dot" style="background:${p.color}; color:${p.color};"></div><b>${p.name.replace('The ','')}</b><span>${p.subtitle}</span>`;
     el.addEventListener('click', ()=>{
       ensureEntered();
       if(scene.isBeyond) toggleBeyond(false);
@@ -121,7 +131,6 @@ function renderHeroPeek(){
   }
 }
 
-// beyond legend
 function renderBeyondLegend(){
   beyondLegend.innerHTML='';
   const types: Record<string, {label:string, color:string}> = {
@@ -133,38 +142,77 @@ function renderBeyondLegend(){
     'Probe': {label:'Probes', color:'#FFD700'},
     'Cluster': {label:'Clusters', color:'#B0E0E6'},
   };
-  Object.entries(types).forEach(([k,v])=>{
+  Object.entries(types).forEach(([_,v])=>{
     const el=document.createElement('span'); el.className='legend-item';
     el.innerHTML=`<i style="background:${v.color}; color:${v.color}"></i> ${v.label}`;
     beyondLegend.appendChild(el);
   });
 }
 
-// Sheet templating
 function openSheet(id: string){
   const data = PLANETS.find(p=> p.id===id) as PlanetData | undefined;
   const beyond = BEYOND_OBJECTS.find(b=> b.id===id) as BeyondObject | undefined;
-  if(data) renderPlanetSheet(data);
+  const isCraft = ['iss','hubble','voyager','apollo','parker','mro'].includes(id);
+  if(isCraft){
+    renderCraftSheet(id);
+  } else if(data) renderPlanetSheet(data);
   else if(beyond) renderBeyondSheet(beyond);
   else return;
   currentSheetId = id;
   factsheet.classList.add('is-open');
   sheetScroll.scrollTop = 0;
 }
-
 function closeSheet(){
   factsheet.classList.remove('is-open');
   currentSheetId = null;
   setActiveRail(null);
 }
 
+function renderCraftSheet(id: string){
+  const labels: Record<string, {name:string, desc:string, repo:string}> = {
+    iss: { name: 'ISS', desc: 'International Space Station — 109m wide, orbits Earth every 93 min. Real GLB 39KB from NASA.', repo: 'nasa/NASA-3D-Resources: International Space Station (ISS) (A)' },
+    hubble: { name: 'Hubble Space Telescope', desc: 'Hubble — 2.4m mirror, launched 1990, 1.6MB GLB from NASA. Orbits Earth, sees to edge of observable universe.', repo: 'nasa/NASA-3D-Resources: Hubble Space Telescope (A)' },
+    voyager: { name: 'Voyager 1', desc: 'Voyager 1 — farthest human object (162 AU), Golden Record onboard. 279KB GLB from NASA. Heading to interstellar space.', repo: 'nasa/NASA-3D-Resources: Voyager Probe (A)' },
+    apollo: { name: 'Apollo Lunar Module', desc: 'Apollo LM — landed 6 crews on Moon 1969-72. 700KB GLB from NASA.', repo: 'nasa/NASA-3D-Resources: Apollo Lunar Module' },
+    parker: { name: 'Parker Solar Probe', desc: 'Parker — fastest spacecraft, touches Sun corona (430KB GLB). Launched 2018.', repo: 'nasa/NASA-3D-Resources: Parker Solar Probe' },
+    mro: { name: 'Mars Reconnaissance Orbiter', desc: 'MRO — hi-res Mars imager, 2.5MB GLB. Mapping Mars since 2006.', repo: 'nasa/NASA-3D-Resources: MRO (A)' },
+  };
+  const info = labels[id] ?? { name: id, desc: 'Real NASA model fetched from GitHub via api.github.com.', repo: 'nasa/NASA-3D-Resources' };
+  sheetScroll.innerHTML = `
+    <div class="sheet-hero">
+      <div class="sheet-planet-icon" style="background: radial-gradient(circle at 30% 30%, #FFD700, #FF8C00 68%); color:#FFD700">🛰️</div>
+      <div>
+        <h2 class="sheet-title">${info.name}</h2>
+        <p class="sheet-subtitle">Real NASA 3D Model • GLB from GitHub</p>
+        <div class="sheet-badges"><span class="badge accent">Spacecraft</span><span class="badge">${info.repo.split(':')[0]}</span></div>
+      </div>
+    </div>
+    <div class="kid-callout"><i>🛰️</i> <span><b>Real 3D:</b> ${info.desc}<br><small>Fetched via <code>api.github.com</code> → <code>codeload.github.com</code> → saved to <code>public/models/${id}.glb</code></small></span></div>
+    <p style="color:var(--muted); font-size:12px; margin:10px 0">These models are <b style="color:var(--text)">public domain NASA</b>, rendered with THREE.GLTFLoader + Draco. They orbit their parent body live — click Tour to watch them move.</p>
+    <div class="sheet-actions">
+      <button class="sheet-btn primary" data-action="focusCraft">🎯 Follow ${info.name}</button>
+      <button class="sheet-btn" data-action="back">← Back</button>
+    </div>
+    <p style="color:var(--muted); font-size:11px; margin-top:10px">Provenance: <code>${info.repo}</code> • SHA from <code>public/github-assets.json</code> • Fetched ${manifest.fetchedAt.slice(0,10)}</p>
+  `;
+  sheetScroll.querySelector('[data-action="focusCraft"]')?.addEventListener('click', ()=>{
+    // find craft world pos
+    const entry = (scene as any).spacecraftManager?.crafts.get(id);
+    if(entry){
+      const pos = entry.mesh.position.clone();
+      // fly to it
+      (scene as any).target.copy(pos);
+      (scene as any).spherical.radius=3.5;
+      scene.updateCameraPos();
+      showToast(`Following ${info.name} — it orbits live!`);
+    }
+  });
+  sheetScroll.querySelector('[data-action="back"]')?.addEventListener('click', ()=> closeSheet());
+}
+
 function renderPlanetSheet(p: PlanetData){
   setActiveRail(p.id);
-  // build comparisons
   const earthDiameter = 12742;
-  const sizePct = Math.min(100, (p.diameterKm / 139820) * 100 * 1.1); // relative to Jupiter-ish for visual
-  const earthPct = (earthDiameter / 139820)*100;
-
   const moonsHtml = p.moons.length ? p.moons.map(m=> `
     <div class="moon-card">
       <span style="font-size:20px">🌙</span>
@@ -175,7 +223,6 @@ function renderPlanetSheet(p: PlanetData){
     </div>
   `).join('') : `<p style="color:var(--muted); font-size:13px">No moons — ${p.name} travels alone.</p>`;
 
-  // quiz: simple question per planet
   const quizQ = quizForPlanet(p);
   const quizHtml = quizQ ? `
     <div class="quiz-box" id="quizBox">
@@ -186,7 +233,9 @@ function renderPlanetSheet(p: PlanetData){
     </div>
   ` : '';
 
-  // tab content
+  // provenance badge if real texture loaded
+  const realBadgeHtml = scene?.realLoaded?.includes(p.id+'.jpg') || scene?.realLoaded?.includes(p.id) ? `<span class="badge" style="border-color:rgba(34,197,94,0.35); color:#22C55E">✓ Real texture from GitHub</span>` : `<span class="badge">Procedural fallback</span>`;
+
   const overviewContent = `
     <p style="color:var(--muted); font-size:13px; line-height:1.6; margin:10px 0 10px">
       ${p.type} • ${p.classification} • Discovered: ${p.discovered}
@@ -214,7 +263,7 @@ function renderPlanetSheet(p: PlanetData){
       <div class="fact"><h4>Distance from Sun</h4><p><b>${p.distanceKm}</b><br><small>${p.distanceAU} AU${p.distanceAU? ` • Light: ${(p.distanceAU*8.3).toFixed(1)} min` : ''}</small></p></div>
       <div class="fact"><h4>Year & Day</h4><p><b>${p.orbitPeriod}</b><br><small>Year • Day: ${p.dayLength}</small></p></div>
       <div class="fact"><h4>Temperature</h4><p><b>${p.avgTemp}</b><br><small>${p.tempRange}</small></p></div>
-      <div class="fact"><h4>Tilt</h4><p><b>${p.tilt}</b><br><small>Axial tilt creates seasons (where atmosphere exists)</small></p></div>
+      <div class="fact"><h4>Tilt</h4><p><b>${p.tilt}</b><br><small>Axial tilt creates seasons</small></p></div>
     </div>
     <div style="margin-top:12px; background:rgba(255,255,255,0.06); border:1px solid var(--line); border-radius:12px; padding:10px">
       <h4 style="margin:0 0 4px; font:700 11px 'Space Grotesk'; letter-spacing:0.10em; text-transform:uppercase; color:var(--muted)">Composition</h4>
@@ -224,15 +273,15 @@ function renderPlanetSheet(p: PlanetData){
     </div>
   `;
   const moonsContent = `
-    <p style="color:var(--muted); font-size:13px; margin:0 0 8px">${p.name} has <b style="color:var(--text)">${p.moonsCount} moon${p.moonsCount===1?'':'s'}</b> confirmed. ${p.id==='earth'?'Our Moon stabilizes seasons and tides.': p.id==='jupiter'?'Four are Galilean giants visible with binoculars!': p.id==='saturn'?'146 and counting — more than any planet.':''}</p>
+    <p style="color:var(--muted); font-size:13px; margin:0 0 8px">${p.name} has <b style="color:var(--text)">${p.moonsCount} moon${p.moonsCount===1?'':'s'}</b> confirmed.</p>
     ${moonsHtml}
-    ${p.hasRings? `<div style="margin-top:10px; background: rgba(255,210,100,0.10); border:1px solid rgba(255,210,100,0.22); border-radius:12px; padding:10px"><b>💍 Rings:</b> <span style="color:var(--muted); font-size:12px">${p.id==='saturn'?'Huge icy rings — wide enough for 23 Earths, thinner than a house!': p.id==='jupiter'?'Faint dusty rings found 1979 — dark and hard to see.': p.id==='uranus'?'Dark narrow rings, discovered 1977 by star occultation.': 'Faint arcs that shouldn’t be stable — still mysterious.'}</span></div>` : ''}
+    ${p.hasRings? `<div style="margin-top:10px; background: rgba(255,210,100,0.10); border:1px solid rgba(255,210,100,0.22); border-radius:12px; padding:10px"><b>💍 Rings:</b> <span style="color:var(--muted); font-size:12px">${p.id==='saturn'?'Huge icy rings — 23 Earths wide, thinner than a house!': p.id==='jupiter'?'Faint dusty rings found 1979.': p.id==='uranus'?'Dark narrow rings, discovered 1977.': 'Faint arcs — still mysterious.'}</span></div>` : ''}
   `;
   const funContent = `
     <ul class="bullet-list">
       ${p.funFacts.map(f=> `<li>${f}</li>`).join('')}
     </ul>
-    <div class="kid-callout" style="margin-top:12px"><i>🚀</i> <span><b>Try this:</b> Ask an adult to help you find ${p.name} in the night sky — ${p.id==='earth'?'look down! You’re standing on it.': p.id==='mercury'?'look low at sunset/sunrise — it’s tricky!': p.id==='venus'?'look at sunset or sunrise — brightest “star”.': p.id==='mars'?'look for a reddish star that doesn’t twinkle as much.': p.id==='jupiter'?'look for the brightest star-like object — that’s Jupiter. Binoculars show 4 moons!': p.id==='saturn'?'find it near Jupiter often — golden dot. Telescope shows rings!': p.id==='uranus'?'needs binoculars — pale blue-green dot.': p.id==='neptune'?'needs telescope — deep blue dot.': p.id==='pluto'?'needs big telescope — Pluto is super dim (mag 14).': 'look with a star map app!'}</span></div>
+    <div class="kid-callout" style="margin-top:12px"><i>🚀</i> <span><b>Try this:</b> Ask an adult to find ${p.name} in sky — ${p.id==='earth'?'look down!': p.id==='mercury'?'low at sunset/sunrise': p.id==='venus'?'sunset/sunrise brightest “star”': p.id==='mars'?'reddish star': p.id==='jupiter'?'brightest star-like': p.id==='saturn'?'golden dot near Jupiter': p.id==='uranus'?'needs binoculars': p.id==='neptune'?'needs telescope': 'needs big telescope'}</span></div>
   `;
 
   let tabContent = '';
@@ -241,7 +290,6 @@ function renderPlanetSheet(p: PlanetData){
   if(activeTab==='moons') tabContent = moonsContent;
   if(activeTab==='fun') tabContent = funContent;
 
-  // discovery info snippet
   const discoveryInfo = p.discoveredBy ? `<p style="color:var(--muted); font-size:11px; margin-top:10px">Discovery: ${p.discovered} • ${p.discoveredBy}</p>` : '';
 
   sheetScroll.innerHTML = `
@@ -255,6 +303,7 @@ function renderPlanetSheet(p: PlanetData){
           <span class="badge">${p.type}</span>
           ${p.hasRings? `<span class="badge" style="border-color:rgba(255,210,100,0.35); color:#FFD166">Has rings</span>`:''}
           <span class="badge">${p.moonsCount} moon${p.moonsCount===1?'':'s'}</span>
+          ${realBadgeHtml}
         </div>
       </div>
     </div>
@@ -270,17 +319,15 @@ function renderPlanetSheet(p: PlanetData){
       ${tabContent}
     </div>
     ${discoveryInfo}
+    <p style="color:var(--muted); font-size:11px; margin-top:10px">Texture: <code>${scene?.realLoaded?.includes(p.id+'.jpg') ? `public/textures/${p.id}.jpg (KyleGough/solar-system)` : 'procedural canvas fallback'}</code> • 3D: SphereGeometry 48seg</p>
   `;
 
-  // wire tabs
   sheetScroll.querySelectorAll('.sheet-tab').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       activeTab = (btn as HTMLElement).dataset.tab as any;
       renderPlanetSheet(p);
     });
   });
-
-  // wire quiz
   const quizBox = sheetScroll.querySelector('#quizBox');
   if(quizBox){
     sheetScroll.querySelectorAll('.quiz-opt').forEach(btn=>{
@@ -296,20 +343,15 @@ function renderPlanetSheet(p: PlanetData){
           (b as HTMLButtonElement).disabled=true;
         });
         feedback.textContent = isCorrect ? `✅ ${quizQ!.explain}` : `❌ Not quite. ${quizQ!.explain}`;
-        if(isCorrect){
-          showToast(`🌟 Correct! You know ${p.name} well!`);
-        }
+        if(isCorrect) showToast(`🌟 Correct! You know ${p.name} well!`);
       });
     });
   }
-
-  // wire sheet actions
   const focusBtn = sheetScroll.querySelector('[data-action="focus"]') as HTMLButtonElement | null;
   if(focusBtn) focusBtn.addEventListener('click', ()=> scene.focusOnPlanet(p.id));
   const compBtn = sheetScroll.querySelector('[data-action="compare"]') as HTMLButtonElement | null;
   if(compBtn) compBtn.addEventListener('click', ()=>{
     activeTab='numbers'; renderPlanetSheet(p);
-    sheetScroll.querySelector('[data-panel]')?.scrollIntoView({behavior:'smooth'});
   });
 }
 
@@ -334,7 +376,6 @@ function renderBeyondSheet(b: BeyondObject){
       <button class="sheet-btn primary" data-action="focusBeyond">🎯 Fly to ${b.name}</button>
       <button class="sheet-btn" data-action="backSolar">← Solar System</button>
     </div>
-    <p style="color:var(--muted); font-size:11px; margin-top:10px">Tip: Distances in Beyond are compressed like a map — real space is vastly emptier.</p>
   `;
   sheetScroll.querySelector('[data-action="focusBeyond"]')?.addEventListener('click', ()=> scene.focusBeyondObject(b.id));
   sheetScroll.querySelector('[data-action="backSolar"]')?.addEventListener('click', ()=> toggleBeyond(false));
@@ -342,65 +383,83 @@ function renderBeyondSheet(b: BeyondObject){
 
 function quizForPlanet(p: PlanetData): {q:string, opts:string[], answer:number, explain:string} | null {
   const bank: Record<string, {q:string, opts:string[], answer:number, explain:string}> = {
-    sun: {q: "How much of the Solar System's mass is the Sun?", opts:["99.86% — almost everything","About half","Only 10%"], answer:0, explain:"The Sun is 99.86% of total mass — everything else is dust by comparison."},
-    mercury: {q:"How long is a year on Mercury vs a day?", opts:["Year (88d) shorter than day","Day shorter than year","They are equal"], answer:0, explain:"A year (88d) is shorter than a solar day (176d) — two sunrises per year!"},
-    venus: {q:"Why is Venus hotter than Mercury even though Mercury is closer?", opts:["Venus CO₂ traps heat like a blanket","Venus is bigger","Venus is closer"], answer:0, explain:"Venus thick CO₂ creates runaway greenhouse — 462°C everywhere!"},
-    earth: {q:"What stabilizes Earth's tilt and seasons?", opts:["The Moon","Mars","The Sun"], answer:0, explain:"The Moon keeps tilt steady at 23.5° — without it, seasons would swing wildly."},
-    mars: {q:"What’s Olympus Mons on Mars?", opts:["Tallest volcano in Solar System","Largest ocean","Deepest canyon"], answer:0, explain:"Olympus Mons is 22km high, 3× Everest, as wide as France!"},
-    jupiter: {q:"What is the Great Red Spot?", opts:["Storm bigger than Earth, 350+ years","A moon","An ocean"], answer:0, explain:"Great Red Spot is a giant storm 1.3× Earth, raging for centuries!"},
-    saturn: {q:"What are Saturn's rings made of?", opts:["Mostly water ice chunks","Solid metal","Gas clouds"], answer:0, explain:"Rings are countless water-ice pieces, thin as a house, wide enough for 23 Earths!"},
-    uranus: {q:"Why is Uranus tipped on its side?", opts:["Giant collision long ago","Its moons pulled it","It was born that way"], answer:0, explain:"Uranus rolls 98° sideways — likely hit by Earth-sized object early on."},
-    neptune: {q:"How fast are Neptune's winds?", opts:["2,100 km/h — faster than sound","100 km/h","500 km/h"], answer:0, explain:"Neptune has fastest winds: 2,100 km/h — 6× Earth hurricane!"},
-    pluto: {q:"What is Tombaugh Regio on Pluto?", opts:["Heart-shaped nitrogen glacier","A volcano","A crater"], answer:0, explain:"Pluto's heart (Tombaugh Regio) is 1,600km wide nitrogen ice plain!"},
+    sun: {q: "How much Solar System mass is the Sun?", opts:["99.86% — almost everything","About half","Only 10%"], answer:0, explain:"99.86% — everything else is dust."},
+    mercury: {q:"How long is a year on Mercury vs a day?", opts:["Year (88d) shorter than day","Day shorter than year","Equal"], answer:0, explain:"Year 88d < solar day 176d — two sunrises/year!"},
+    venus: {q:"Why is Venus hotter than Mercury?", opts:["Venus CO₂ traps heat","Bigger","Closer"], answer:0, explain:"Thick CO₂ greenhouse — 462°C!"},
+    earth: {q:"What stabilizes Earth's tilt?", opts:["The Moon","Mars","Sun"], answer:0, explain:"Moon keeps tilt 23.5° — stable seasons."},
+    mars: {q:"What’s Olympus Mons?", opts:["Tallest volcano in System","Largest ocean","Deepest canyon"], answer:0, explain:"22km high, 3× Everest!"},
+    jupiter: {q:"What is the Great Red Spot?", opts:["Storm bigger than Earth, 350+ yrs","A moon","Ocean"], answer:0, explain:"Giant storm 1.3× Earth!"},
+    saturn: {q:"What are Saturn's rings made of?", opts:["Mostly water ice","Solid metal","Gas"], answer:0, explain:"Countless water-ice pieces!"},
+    uranus: {q:"Why is Uranus tipped?", opts:["Giant collision","Moons pulled","Born that way"], answer:0, explain:"98° sideways — hit by Earth-sized body."},
+    neptune: {q:"How fast are Neptune's winds?", opts:["2,100 km/h","100 km/h","500 km/h"], answer:0, explain:"2,100 km/h — fastest!"},
+    pluto: {q:"What is Tombaugh Regio?", opts:["Heart-shaped nitrogen glacier","Volcano","Crater"], answer:0, explain:"1,600km wide nitrogen heart!"},
   };
   return bank[p.id] ?? null;
 }
 
-// Enter flow
 function ensureEntered(){
   if(hasEntered) return;
   hasEntered=true;
   hero.classList.add('is-hidden');
-  // enable controls visible via CSS sibling
-  showToast('🚀 Engines on! Drag to look around, click a planet to board.');
+  showToast('🚀 Engines on! Drag to look, click planet to board. Try Tour or Drag-orbits!');
 }
-
-function enterSolar(){
-  ensureEntered();
-  toggleBeyond(false);
-  // reset camera a bit
-  scene.clearFocus();
-}
-function enterBeyond(){
-  ensureEntered();
-  toggleBeyond(true);
-  showToast('◈ Warp complete — welcome to interstellar space! Click a star to inspect.');
-}
-
-// Beyond toggle
+function enterSolar(){ ensureEntered(); toggleBeyond(false); scene.clearFocus(); }
+function enterBeyond(){ ensureEntered(); toggleBeyond(true); showToast('◈ Warp complete — welcome to interstellar space!'); }
 function toggleBeyond(on: boolean){
   if(on===scene.isBeyond) return;
   scene.toggleBeyond(on);
-  // UI updates
   if(on){
     beyondHud.classList.add('is-visible');
     btnBeyondTop.classList.add('is-active');
     btnRailBeyond.textContent='← Solar System';
-    (btnRailBeyond as any)._beyond=true;
     statFocus.textContent='Beyond — Interstellar Space';
-    // close solar sheet if open solar? keep but allow beyond clicks to override
   } else {
     beyondHud.classList.remove('is-visible');
     btnBeyondTop.classList.remove('is-active');
     btnRailBeyond.innerHTML='<span>◈</span> Go Beyond <small>Voyager’s view</small>';
-    (btnRailBeyond as any)._beyond=false;
     statFocus.textContent='Solar System';
   }
 }
 
-// Init loading simulation + scene
+// Mini-map top-down canvas
+function drawMiniMap(){
+  const ctx = miniMapCanvas.getContext('2d')!;
+  const w=120, h=120;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#0A0E22'; ctx.fillRect(0,0,w,h);
+  // sun center
+  ctx.fillStyle='#FDB813'; ctx.beginPath(); ctx.arc(w/2,h/2,3,0,Math.PI*2); ctx.fill();
+  // orbits and planets
+  for(const p of PLANETS){
+    if(p.id==='sun') continue;
+    const g = scene?.planetGroups.get(p.id);
+    if(!g) continue;
+    const r = Math.min(54, (g.userData.orbitRadius / 70) * 54);
+    // orbit
+    ctx.strokeStyle= p.color; ctx.globalAlpha=0.35; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(w/2,h/2,r,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
+    // planet dot
+    const ang = g.userData.curAngle ?? 0;
+    const x = w/2 + Math.cos(ang)*r;
+    const y = h/2 + Math.sin(ang)*r;
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(x,y, p.id==='jupiter'||p.id==='saturn'?2.2:1.6,0,Math.PI*2); ctx.fill();
+    if(scene.focusTarget===p.id){
+      ctx.strokeStyle='white'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.stroke();
+    }
+  }
+  // spacecraft
+  if(scene?.spacecraftManager){
+    for(const [,entry] of scene.spacecraftManager.crafts){
+      const pos = entry.mesh.position;
+      // project to top-down (x,z) scaled
+      const mx = w/2 + (pos.x/70)*54;
+      const my = h/2 + (pos.z/70)*54;
+      if(mx<0||mx>w||my<0||my>h) continue;
+      ctx.fillStyle='#FFD700'; ctx.fillRect(mx-1,my-1,2,2);
+    }
+  }
+}
+
 function init(){
-  // fake loader progress (real textures are procedural instant, but we simulate for polish)
   let p=0;
   const iv=setInterval(()=>{
     p+= Math.random()*18+6;
@@ -408,34 +467,37 @@ function init(){
     else loaderFill.style.width=p+'%';
   }, 120);
 
-  // init scene after slight delay to let loader show
   setTimeout(()=>{
     scene = new SpaceScene(canvas);
-    // wire callbacks
     scene.onPlanetClick = (id:string)=>{
       if(!hasEntered) ensureEntered();
       openSheet(id);
+    };
+    scene.onCraftClick = (id:string)=>{
+      openSheet(id);
+      showToast(`🛰️ ${id.toUpperCase()} — real NASA model from GitHub! Click Follow to track.`);
     };
     scene.onHover = (id:string|null)=>{
       if(id){
         const planet = PLANETS.find(p=> p.id===id);
         const beyond = BEYOND_OBJECTS.find(b=> b.id===id);
-        const name = planet ? planet.name : beyond ? beyond.name : id;
-        bottomBar.querySelector('#bbHint')!.textContent = `◉ ${name} — click to inspect`;
+        const craft = ['iss','hubble','voyager','apollo','parker','mro'].includes(id);
+        const name = craft ? id.toUpperCase()+' spacecraft' : planet ? planet.name : beyond ? beyond.name : id;
+        (document.getElementById('bbHint') as HTMLElement).textContent = `◉ ${name} — click to inspect`;
       } else {
-        (document.getElementById('bbHint') as HTMLElement).textContent = hasEntered ? `☄︎ Tip: Click the Sun for its secrets, or Saturn for its 146 moons. Press O to hide orbits, Space to pause.` : `Hover a planet and click — or press Explore Space to start.`;
+        (document.getElementById('bbHint') as HTMLElement).textContent = hasEntered ? `☄︎ Tip: Click Sun/Saturn, drag orbits ✋, try Tour ▶, double-click to dock.` : `Hover planet and click — or press Explore Space.`;
       }
     };
-    // initial camera
-    scene.spherical.radius=58;
-    scene.updateCameraPos();
+    scene.onTextureLoaded = (count, list)=>{
+      realBadge.style.display='inline-block';
+      realBadge.textContent=`✓ ${count} real textures from GitHub`;
+      showToast(`✅ Loaded ${count} real planet textures from GitHub (KyleGough/solar-system)`);
+      // also update about? 
+    };
+    scene.spherical.radius=58; scene.updateCameraPos();
+    renderRail(); renderHeroPeek(); renderBeyondLegend();
 
-    // render UI
-    renderRail();
-    renderHeroPeek();
-    renderBeyondLegend();
-
-    // time controls wire
+    // controls
     const segs = document.querySelectorAll('.tseg');
     segs.forEach(s=>{
       s.addEventListener('click', ()=>{
@@ -451,16 +513,19 @@ function init(){
       btnPause.textContent = scene.paused ? '▶︎ Play' : '⏸︎ Pause';
       btnPause.style.background = scene.paused ? 'white' : '';
       btnPause.style.color = scene.paused ? '#0B1220' : '';
-      showToast(scene.paused ? '⏸︎ Paused — press Space or click Play' : '▶︎ Resumed');
+      showToast(scene.paused ? '⏸︎ Paused' : '▶︎ Resumed');
     });
     chkOrbits.addEventListener('change', ()=> scene.setShowOrbits(chkOrbits.checked));
     chkLabels.addEventListener('change', ()=> scene.setShowLabels(chkLabels.checked));
     chkMotion.addEventListener('change', ()=>{
-      // motion blur fake via fog density
       scene.scene.fog = new THREE.FogExp2(chkMotion.checked ? 0x020510 : 0x040818, chkMotion.checked?0.0022:0.0012);
     });
+    chkSpacecraft.addEventListener('change', ()=> scene.setShowSpacecraft(chkSpacecraft.checked));
+    chkDrag.addEventListener('change', ()=> {
+      scene.setEnableDrag(chkDrag.checked);
+      showToast(chkDrag.checked ? '✋ Drag mode: grab a planet to move its orbit!' : 'Drag mode off');
+    });
 
-    // buttons
     btnExplore.addEventListener('click', enterSolar);
     btnHeroBeyond.addEventListener('click', enterBeyond);
     btnBeyondTop.addEventListener('click', ()=> toggleBeyond(!scene.isBeyond));
@@ -468,27 +533,106 @@ function init(){
     btnReturnSolar.addEventListener('click', ()=> toggleBeyond(false));
     btnResetView.addEventListener('click', ()=> { scene.clearFocus(); closeSheet(); showToast('↺ View reset'); });
     btnCloseSheet.addEventListener('click', closeSheet);
-    heroScroll.addEventListener('click', ()=> { ensureEntered(); showToast('Drag to look, scroll to zoom, click planets!'); });
+    heroScroll.addEventListener('click', ()=> { ensureEntered(); });
 
-    // keyboard space = pause
+    // new interactivity
+    planetSearch.addEventListener('input', ()=> renderRail(planetSearch.value));
+    btnTour.addEventListener('click', ()=>{
+      if(tourActive){
+        scene.stopTour(); tourActive=false; btnTour.textContent='▶ Tour'; showToast('Tour stopped');
+      } else {
+        tourActive=true; btnTour.textContent='⏹ Stop Tour'; btnTour.style.background='white'; btnTour.style.color='#0B1220';
+        scene.startTour((id)=> { openSheet(id); setActiveRail(id); });
+        showToast('🎬 Tour started — visiting every planet');
+      }
+    });
+    btnScaleKid.addEventListener('click', ()=> {
+      scene.setScaleMode('kid');
+      btnScaleKid.style.background='white'; btnScaleKid.style.color='#0B1220';
+      btnScaleReal.style.background=''; btnScaleReal.style.color='';
+      scaleHint.textContent='Kid Scale (visible) • Real scale would be invisible!';
+      showToast('Kid Scale — exaggerated for learning');
+    });
+    btnScaleReal.addEventListener('click', ()=>{
+      scene.setScaleMode('real');
+      btnScaleReal.style.background='white'; btnScaleReal.style.color='#0B1220';
+      btnScaleKid.style.background=''; btnScaleKid.style.color='';
+      scaleHint.textContent='True Scale (real AU & diameters) — notice how tiny planets become!';
+      showToast('True Scale — Earth 0.35, Jupiter 3.9× Earth, distances in AU');
+    });
+    btnResetOrbits.addEventListener('click', ()=> { scene.resetOrbits(); showToast('Orbits reset to kid scale'); });
+    btnCompare.addEventListener('click', ()=>{
+      compareMode=!compareMode;
+      if(compareMode){
+        // show overlay comparing selected vs Earth
+        const overlay=document.createElement('div'); overlay.id='compareOverlay'; overlay.className='compare-strip';
+        overlay.innerHTML=`<b>Earth vs Selected</b><div class="bar"><div class="fill" style="width:100%"></div></div><button class="tbtn small" onclick="this.parentElement.remove()">✕</button>`;
+        document.body.appendChild(overlay);
+        showToast('Compare: Earth 1× vs others — see Numbers tab for details');
+        btnCompare.style.background='white'; btnCompare.style.color='#0B1220';
+      } else {
+        document.getElementById('compareOverlay')?.remove();
+        btnCompare.style.background=''; btnCompare.style.color='';
+      }
+    });
+
+    // mini-map click to jump
+    miniMapCanvas.addEventListener('click', (e)=>{
+      const rect=miniMapCanvas.getBoundingClientRect();
+      const x=(e.clientX-rect.left)/rect.width*120 -60;
+      const y=(e.clientY-rect.top)/rect.height*120 -60;
+      // find closest planet to click
+      let best: string| null=null, bestD=1e9;
+      for(const p of PLANETS){
+        if(p.id==='sun') continue;
+        const g=scene.planetGroups.get(p.id); if(!g) continue;
+        const r=Math.min(54, (g.userData.orbitRadius/70)*54);
+        const ang=g.userData.curAngle; const px=Math.cos(ang)*r, py=Math.sin(ang)*r;
+        const d=Math.hypot(px-x, py-y);
+        if(d<bestD){ bestD=d; best=p.id; }
+      }
+      if(best && bestD<8){ scene.focusOnPlanet(best); openSheet(best); }
+    });
+
+    // easter egg: click Sun 5 times -> supernova
+    let sunClicks=0;
+    const origOnPlanetClick = scene.onPlanetClick;
+    scene.onPlanetClick = (id:string)=>{
+      if(id==='sun'){ sunClicks++; if(sunClicks===5){ triggerSupernova(); sunClicks=0; } }
+      origOnPlanetClick(id);
+    };
+
+    function triggerSupernova(){
+      showToast('💥 SUPERNOVA! Sun expands…');
+      scene.sun.scale.set(1.4,1.4,1.4);
+      (scene.sun.material as any).emissiveIntensity=2.5;
+      scene.scene.background=new THREE.Color(0xFF4500);
+      setTimeout(()=>{
+        scene.sun.scale.set(1,1,1); (scene.sun.material as any).emissiveIntensity=1.15;
+        scene.scene.background=new THREE.Color(0x020510);
+        showToast('…and collapses. That’s how Betelgeuse will go!');
+      }, 2200);
+    }
+
     window.addEventListener('keydown', (e)=>{
       if(e.code==='Space'){ scene.setPaused(!scene.paused); btnPause.textContent = scene.paused ? '▶︎ Play' : '⏸︎ Pause'; e.preventDefault(); }
       if(e.key==='r' || e.key==='R'){ scene.clearFocus(); }
       if(e.key==='Escape'){ if(factsheet.classList.contains('is-open')) closeSheet(); else if(scene.isBeyond) toggleBeyond(false); }
     });
 
-    // About dialog
     btnAbout.addEventListener('click', ()=> aboutDialog.showModal());
     btnCloseAbout.addEventListener('click', ()=> aboutDialog.close());
 
-    // click on factsheet close when clicking outside? handle via button only
-
-    // initial hint
     statTime.textContent='1×';
+
+    // mini-map loop
+    setInterval(drawMiniMap, 200);
+    // initial show provenance toast
+    if(manifest.textures.length) realBadge.style.display='inline-block', realBadge.textContent=`Fetching ${manifest.textures.length} textures + ${manifest.spacecraft.length} GLBs from GitHub…`;
+    // expose for debug
+    // @ts-ignore
+    (window as any).scene = scene;
   }, 500);
 }
 
-import * as THREE from 'three';
-
-// start
 init();

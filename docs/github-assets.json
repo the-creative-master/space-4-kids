@@ -1,0 +1,160 @@
+{
+  "fetchedAt": "2026-10-23T15:46:30.188Z",
+  "textures": [
+    {
+      "file": "sun.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/sun.jpg",
+      "sha": "56f235d11a88827a94e0541d389b7e4d486f0b43",
+      "size": 784849
+    },
+    {
+      "file": "mercury.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/mercury.jpg",
+      "sha": "79b879079bc7756c222af7a1b07156787b0c675c",
+      "size": 148137
+    },
+    {
+      "file": "venus.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/venus.jpg",
+      "sha": "6ce5821929a5ec99fe21cd23008ea587cb149a29",
+      "size": 240040
+    },
+    {
+      "file": "earth.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/earth.jpg",
+      "sha": "41d50903706efbbe255ca48f7a2eb496ee8f2426",
+      "size": 436448
+    },
+    {
+      "file": "earth-clouds.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/earth-clouds.jpg",
+      "sha": "cc02123c7834958444767dbffcc59d647b1c6e1b",
+      "size": 223229
+    },
+    {
+      "file": "earth-night.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/earth-night.jpg",
+      "sha": "baec22452ce7164114a87003d950accf7c6b2aad",
+      "size": 124384
+    },
+    {
+      "file": "moon.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/moon.jpg",
+      "sha": "6126bb2d94b3c85ba9ee5746feeddcd1646416eb",
+      "size": 603433
+    },
+    {
+      "file": "mars.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/mars.jpg",
+      "sha": "90256edad0366bbb5851c18026e8aa1fec38a238",
+      "size": 1852475
+    },
+    {
+      "file": "jupiter.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/jupiter.jpg",
+      "sha": "29d02fbe0102e8f18834b84aa571dde652ed4c90",
+      "size": 488641
+    },
+    {
+      "file": "saturn.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/saturn.jpg",
+      "sha": "d8b23dfe7d959aae965be0ece559a25c75651b6b",
+      "size": 199916
+    },
+    {
+      "file": "saturn-ring.png",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/saturn-ring.png",
+      "sha": "1635b7be2a250d4e5824dd3d8a194da395197edb",
+      "size": 11814
+    },
+    {
+      "file": "uranus.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/uranus.jpg",
+      "sha": "a2abc58ef223f40f8abd1d373994e0b62fe92f1c",
+      "size": 77738
+    },
+    {
+      "file": "neptune.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/neptune.jpg",
+      "sha": "30e7ac5540e5afb7d997034f5c51bc44a0d8d321",
+      "size": 241580
+    },
+    {
+      "file": "triton.jpg",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/triton.jpg",
+      "sha": "b2f2c7e4f8e2ff2c036dca9141697ffa27eac02c",
+      "size": 94041
+    },
+    {
+      "file": "titan.webp",
+      "repo": "KyleGough/solar-system",
+      "path": "static/textures/titan.webp",
+      "sha": "483243ff56f6ec2cf315c178f2f9cbb03d2c33d7",
+      "size": 35558
+    }
+  ],
+  "spacecraft": [
+    {
+      "file": "voyager.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/Voyager Probe (A)/Voyager Probe (A).glb",
+      "label": "Voyager Probe",
+      "sha": "3126b064d25762796a5fdefca8e430104764070d",
+      "size": 285936
+    },
+    {
+      "file": "hubble.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/Hubble Space Telescope (A)/Hubble Space Telescope (A).glb",
+      "label": "Hubble Space Telescope",
+      "sha": "8ce60c684cb45e06962782158a87afa6ef42d504",
+      "size": 1694988
+    },
+    {
+      "file": "iss.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/International Space Station (ISS) (A)/International Space Station (ISS) (A).glb",
+      "label": "ISS",
+      "sha": "ff970bb2056230fdf180590dd5ca59544f92d18e",
+      "size": 39708
+    },
+    {
+      "file": "apollo-lm.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/Apollo Lunar Module/Apollo Lunar Module.glb",
+      "label": "Apollo Lunar Module",
+      "sha": "74b7b99a60f9903a0592fd763ed14482204e24d9",
+      "size": 716840
+    },
+    {
+      "file": "parker.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/Parker Solar Probe/Parker Solar Probe.glb",
+      "label": "Parker Solar Probe",
+      "sha": "a405306c4ad6c67b5a6556b2057d4ddaed40be57",
+      "size": 443572
+    },
+    {
+      "file": "mro.glb",
+      "repo": "nasa/NASA-3D-Resources",
+      "path": "3D Models/Mars Reconnaissance Orbiter (MRO) (A)/Mars Reconnaissance Orbiter (MRO) (A).glb",
+      "label": "MRO",
+      "sha": "c2b8efefb25c214ff648696ef021c4bf21ff602d",
+      "size": 2652460
+    }
+  ]
+}
